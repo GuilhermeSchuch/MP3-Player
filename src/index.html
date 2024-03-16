@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <!-- <title>Hello World!</title> -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <link rel="stylesheet" href="styles.css">
+    <meta name="author" content="Guilherme Schuch">
+  </head>
+
+  <body>
+    <div class="importSongsContainer">
+      <label for="fileInput" class="selectSongsBtn">Selecionar Músicas</label>
+
+      <input
+        type="file"
+        name="fileInput"
+        id="fileInput"
+        multiple
+        accept=".mp3"
+        style="display: none;"
+      >
+    </div>
+
+    <ul id="audioList"></ul>
+    <ul id="playlist"></ul>
+
+    <!-- <p id="currentSong"></p> -->
+    <progress id="progressBar" value="0" max="100"></progress>
+
+    <div class="controls">
+      <div class="buttons">
+        <button
+          id="prevSongBtn"
+          class="controlBtn clearBtn"
+          disabled
+        >
+          <img src="./assets/previous.ico" alt="PREV" width="20">
+        </button>
+
+        <button
+          id="togglePauseBtn"
+          class="controlBtn clearBtn"
+          disabled
+          style="display: none;"
+        >
+          <img src="./assets/pause.ico" alt="PAUSE" width="20">
+        </button>
+
+        <button
+          id="playSongs"
+          class="controlBtn clearBtn"
+          disabled
+        >
+          <img src="./assets/play.ico" alt="PLAY" width="20">
+        </button>
+
+        <button
+          id="nextSongBtn"
+          class="controlBtn clearBtn"
+          disabled
+        >
+          <img src="./assets/next.ico" alt="NEXT" width="20">
+        </button>
+      </div>
+
+      <input type="range" name="volume" id="volume" max="1" min="0" step="0.01">
+    </div>
+
+    <div class="about">
+      <p>V1.0</p>
+      <p>By: Guilherme Schuch</p>
+    </div>
+  </body>
+
+  <script src="renderer.js"></script>
+</html>
