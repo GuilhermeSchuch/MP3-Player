@@ -20,7 +20,7 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 
 ## Demo
 
-<img src="/src/assets/images/demonstration/demonstration.gif" width="300" />
+<img src="/src/assets/demo.jpg" width="300" />
 
 <hr>
 
