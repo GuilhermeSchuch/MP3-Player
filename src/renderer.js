@@ -1,5 +1,3 @@
-
-
 const audioList = document.querySelector('#audioList');
 const playSongsBtn = document.querySelector("#playSongs");
 const togglePauseBtn = document.querySelector("#togglePauseBtn");
@@ -57,6 +55,14 @@ fileInput.addEventListener('change', function(event) {
       songItem.textContent = file.name.replace(".mp3", '');
       songItem.classList.add("song");
       playlist.appendChild(songItem);
+      
+
+      songItem.addEventListener("click", () => {
+        document.querySelectorAll("li").forEach((song) => {
+          song.classList.remove("songPlaying")
+        })
+        playSongAtIndex(Array.from(playlist.children).indexOf(songItem));
+      });
     }
   }
 
@@ -141,8 +147,9 @@ function playCurrentSong() {
     // }
     // currentSong.innerHTML = `Tocando agora <span>${filename}<span/>`;
 
-    if(playlist.children[currentAudioIndex - 1]) playlist.children[currentAudioIndex - 1].classList.remove("songPlaying");
-    if(playlist.children[currentAudioIndex + 1]) playlist.children[currentAudioIndex + 1].classList.remove("songPlaying");
+    document.querySelectorAll("li").forEach((song) => {
+      song.classList.remove("songPlaying")
+    })
     playlist.children[currentAudioIndex].classList.toggle("songPlaying");
 
     isPaused = false;
@@ -198,4 +205,12 @@ function togglePause() {
       togglePauseBtn.innerHTML = "<img src='./assets/play.ico' alt='PLAY' width='20'>"
     }
   }
+}
+
+function playSongAtIndex(index) {
+  if (currentAudioIndex === index) return;
+  
+  pauseCurrentSong();
+  currentAudioIndex = index;
+  playCurrentSong();
 }

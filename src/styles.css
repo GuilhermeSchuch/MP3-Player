@@ -147,3 +147,12 @@ body {
   font-size: 12px;
   color: #EEEEEE;
 }
+
+li {
+  cursor: pointer;
+  transition: .2s;
+}
+
+li:hover {
+  opacity: .7;
+}
