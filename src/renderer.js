@@ -32,6 +32,7 @@ fileInput.addEventListener('change', function(event) {
   })
 
   audioList.innerHTML = '';
+  progressBar.value = 0;
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
@@ -141,15 +142,12 @@ function playCurrentSong() {
     currentAudio.play();
     currentAudio.volume = audioObj.volume;
 
-    // let filename = audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '');
-    // if (filename.length > 19) {
-    //   filename = filename.substring(0, 19 - 3) + '...';
-    // }
-    // currentSong.innerHTML = `Tocando agora <span>${filename}<span/>`;
+    progressBar.value = 0;
 
     document.querySelectorAll("li").forEach((song) => {
       song.classList.remove("songPlaying")
     })
+
     playlist.children[currentAudioIndex].classList.toggle("songPlaying");
 
     isPaused = false;
@@ -157,24 +155,28 @@ function playCurrentSong() {
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
 
-    currentAudio.addEventListener('timeupdate', () => {
-      const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
-      progressBar.value = progress;
-    });
+    // Remove previous timeupdate event listener
+    currentAudio.removeEventListener('timeupdate', updateProgressBar);
+
+    currentAudio.addEventListener('timeupdate', updateProgressBar);
 
     currentAudio.addEventListener('ended', () => {
-      if(currentAudioIndex != audioObj.audioElements.length - 1) {
-        console.log("não termineou");
+      if(currentAudioIndex != audioObj.audioElements.length - 1) {        
         playIncomingSong();
       }
       else {
-        console.log("terminpou");
         currentAudioIndex = 0;
         playSongsBtn.style.display = "flex";
         togglePauseBtn.style.display = "none";
       }
     });
   }
+}
+
+function updateProgressBar() {
+  const currentAudio = audioObj.audioElements[currentAudioIndex];
+  const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+  if(progress) progressBar.value = progress;
 }
 
 function pauseCurrentSong() {
@@ -209,6 +211,10 @@ function togglePause() {
 
 function playSongAtIndex(index) {
   if (currentAudioIndex === index) return;
+
+  playSongsBtn.style.display = "none";
+  togglePauseBtn.style.display = "flex";
+  togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
   pauseCurrentSong();
   currentAudioIndex = index;
