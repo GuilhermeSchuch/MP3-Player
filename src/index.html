@@ -31,6 +31,14 @@
     <div class="controls">
       <div class="buttons">
         <button
+          id="backwardBtn"
+          class="controlBtn clearBtn"
+          disabled
+        >
+          <img src="./assets/back.ico" alt="BACK" width="20">
+        </button>
+
+        <button
           id="prevSongBtn"
           class="controlBtn clearBtn"
           disabled
@@ -62,13 +70,21 @@
         >
           <img src="./assets/next.ico" alt="NEXT" width="20">
         </button>
+
+        <button
+          id="forwardBtn"
+          class="controlBtn clearBtn"
+          disabled
+        >
+          <img src="./assets/forward.ico" alt="FORWARD" width="20">
+        </button>
       </div>
 
       <input type="range" name="volume" id="volume" max="1" min="0" step="0.01">
     </div>
 
     <div class="about">
-      <p>V1.2</p>
+      <p>V1.3</p>
       <p>By: Guilherme Schuch</p>
     </div>
   </body>

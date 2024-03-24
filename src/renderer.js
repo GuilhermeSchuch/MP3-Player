@@ -3,6 +3,8 @@ const playSongsBtn = document.querySelector("#playSongs");
 const togglePauseBtn = document.querySelector("#togglePauseBtn");
 const prevSongBtn = document.querySelector("#prevSongBtn");
 const nextSongBtn = document.querySelector("#nextSongBtn");
+const forwardBtn = document.querySelector("#forwardBtn");
+const backwardBtn = document.querySelector("#backwardBtn");
 const currentSong = document.querySelector("#currentSong");
 const playlist = document.querySelector("#playlist");
 const volume = document.querySelector("#volume");
@@ -105,6 +107,14 @@ prevSongBtn.addEventListener("click", (e) => {
 
 nextSongBtn.addEventListener("click", (e) => {
   playIncomingSong();
+});
+
+forwardBtn.addEventListener("click", (e) => {
+  playIncomingSong();
+});
+
+backwardBtn.addEventListener("click", (e) => {
+  restartCurrentSong();
 });
 
 function playPreviousSong() {
@@ -219,4 +229,13 @@ function playSongAtIndex(index) {
   pauseCurrentSong();
   currentAudioIndex = index;
   playCurrentSong();
+}
+
+function restartCurrentSong() {
+  const currentAudio = audioObj.audioElements[currentAudioIndex];
+
+  if(currentAudio) {
+    currentAudio.currentTime = 0;
+    updateProgressBar();
+  }
 }
