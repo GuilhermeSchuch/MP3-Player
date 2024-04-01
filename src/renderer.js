@@ -3,9 +3,9 @@ const playSongsBtn = document.querySelector("#playSongs");
 const togglePauseBtn = document.querySelector("#togglePauseBtn");
 const prevSongBtn = document.querySelector("#prevSongBtn");
 const nextSongBtn = document.querySelector("#nextSongBtn");
-const forwardBtn = document.querySelector("#forwardBtn");
 const backwardBtn = document.querySelector("#backwardBtn");
-const currentSong = document.querySelector("#currentSong");
+const currentSongPlaying = document.querySelector("#currentSongPlaying");
+const toggleLyricBtn = document.querySelector("#toggleLyricBtn");
 const playlist = document.querySelector("#playlist");
 const volume = document.querySelector("#volume");
 const progressBar = document.querySelector("#progressBar");
@@ -14,6 +14,8 @@ const fileInput = document.getElementById('fileInput');
 
 let currentAudioIndex = 0;
 let isPaused = false;
+let isLyricShown = false;
+let lyric = '';
 
 const audioObj = {
   audioElements: [],
@@ -58,7 +60,6 @@ fileInput.addEventListener('change', function(event) {
       songItem.textContent = file.name.replace(".mp3", '');
       songItem.classList.add("song");
       playlist.appendChild(songItem);
-      
 
       songItem.addEventListener("click", () => {
         document.querySelectorAll("li").forEach((song) => {
@@ -73,6 +74,10 @@ fileInput.addEventListener('change', function(event) {
   
   playSongsBtn.style.display = "flex";
   togglePauseBtn.style.display = "none";
+
+  lyric = document.createElement('li');
+  lyric.classList = "lyric";
+  playlist.append(lyric);
 
   document.querySelectorAll("button").forEach((button) => {
     button.disabled = false;
@@ -109,17 +114,18 @@ nextSongBtn.addEventListener("click", (e) => {
   playIncomingSong();
 });
 
-forwardBtn.addEventListener("click", (e) => {
-  playIncomingSong();
-});
-
 backwardBtn.addEventListener("click", (e) => {
   restartCurrentSong();
+});
+
+toggleLyricBtn.addEventListener("click", (e) => {
+  toggleLyric();
 });
 
 function playPreviousSong() {
   pauseCurrentSong();
   currentAudioIndex--;
+
   if (currentAudioIndex < 0) {
     currentAudioIndex = audioObj.audioElements.length - 1;
   }
@@ -129,6 +135,8 @@ function playPreviousSong() {
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
 
   playCurrentSong();
+
+  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
 }
 
 function playIncomingSong() {
@@ -143,14 +151,21 @@ function playIncomingSong() {
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
   playCurrentSong();
+
+  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
 }
 
 function playCurrentSong() {
   const currentAudio = audioObj.audioElements[currentAudioIndex];
-  if (currentAudio) {
+
+  if(currentAudio) {
     currentAudio.currentTime = 0;
     currentAudio.play();
     currentAudio.volume = audioObj.volume;
+
+    if(isLyricShown) {
+      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
+    }
 
     progressBar.value = 0;
 
@@ -219,6 +234,37 @@ function togglePause() {
   }
 }
 
+function toggleLyric() {
+  const currentAudio = audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '');
+
+  if(isLyricShown) {
+    currentSongPlaying.innerHTML = ``;
+    isLyricShown = false;
+
+    Array.from(playlist.children).forEach((song) => {
+      song.style.display = "block";
+    })
+
+    lyric.style.display = "none";
+
+    Array.from(lyric.children).forEach((verse) => {
+      verse.remove();
+    })
+  }
+  else {
+    currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
+    isLyricShown = true;
+
+    Array.from(playlist.children).forEach((song) => {
+      song.style.display = "none";
+    })
+
+    lyric.style.display = "block";
+
+    fetchLyric(currentAudio);
+  }
+}
+
 function playSongAtIndex(index) {
   if (currentAudioIndex === index) return;
 
@@ -229,6 +275,8 @@ function playSongAtIndex(index) {
   pauseCurrentSong();
   currentAudioIndex = index;
   playCurrentSong();
+
+  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
 }
 
 function restartCurrentSong() {
@@ -237,5 +285,35 @@ function restartCurrentSong() {
   if(currentAudio) {
     currentAudio.currentTime = 0;
     updateProgressBar();
+  }
+}
+
+async function fetchLyric(songTitle) {
+  const artist = songTitle.split(' - ')[0];
+  const song = songTitle.split(' - ')[1].replace(".mp3", '');
+
+  const response = await fetch(`https://api.lyrics.ovh/v1/${artist}/${song}`);
+  const fetchedLyric = await response.json();
+
+  const songLyric = fetchedLyric?.lyrics?.split("\r\n")[1];
+
+  Array.from(lyric.children).forEach((verse) => {
+    verse.remove();
+  })
+
+  if(songLyric) {
+    let songVerses = songLyric.split("\n");
+    lyric.innerHTML = '';
+
+    songVerses.forEach((verse) => {
+      const span = document.createElement("span");
+      span.style.display = "block";
+      span.innerHTML = verse;
+
+      lyric.appendChild(span);
+    })
+  }
+  else {
+    lyric.innerHTML = "Letras não encontradas";
   }
 }

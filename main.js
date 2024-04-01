@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
 
 const isDev = false;
@@ -20,7 +20,6 @@ const createWindow = async () => {
   win.loadFile(path.join(__dirname, "src/index.html"));
   isDev && win.webContents.openDevTools();
 }
-
 
 app.whenReady().then(() => {
   createWindow();

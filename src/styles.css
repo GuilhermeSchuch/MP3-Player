@@ -55,6 +55,7 @@ body {
   height: 100vh;
   background-color: #222831;
   padding: 10px;
+  overflow: hidden;
 }
 
 .importSongsContainer {
@@ -91,13 +92,13 @@ body {
   color: #EEEEEE;
 }
 
-#currentSong {
+#currentSongPlaying {
   text-align: center;
   color: #EEEEEE;
   margin-bottom: 5px;
 }
 
-#currentSong span {
+#currentSongPlaying span {
   color: #76ABAE;
 }
 
@@ -133,10 +134,6 @@ body {
   opacity: .7;
 }
 
-#volume {
-  
-}
-
 #progressBar {
   width: 100%;
 }
@@ -148,11 +145,16 @@ body {
   color: #EEEEEE;
 }
 
-li {
+.song {
   cursor: pointer;
   transition: .2s;
 }
 
-li:hover {
+.song:hover {
   opacity: .7;
+}
+
+.lyric {
+  text-align: center;
+  display: none;
 }
