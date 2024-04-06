@@ -1,7 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, globalShortcut  } = require('electron');
 const path = require('node:path');
 
-const isDev = false;
+const isDev = true;
 
 const createWindow = async () => {
   const win = new BrowserWindow({
@@ -17,6 +17,26 @@ const createWindow = async () => {
     },
   })
 
+  globalShortcut.register('CommandOrControl+num8', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 't'});
+  });
+
+  globalShortcut.register('CommandOrControl+num9', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'n'});
+  });
+
+  globalShortcut.register('CommandOrControl+num7', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'p'});
+  });
+
+  globalShortcut.register('CommandOrControl+num5', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'l'});
+  });
+
+  globalShortcut.register('CommandOrControl+num4', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'r'});
+  });
+
   win.loadFile(path.join(__dirname, "src/index.html"));
   isDev && win.webContents.openDevTools();
 }
@@ -24,3 +44,7 @@ const createWindow = async () => {
 app.whenReady().then(() => {
   createWindow();
 })
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll();
+});

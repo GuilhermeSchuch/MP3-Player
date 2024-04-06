@@ -1,4 +1,4 @@
-const audioList = document.querySelector('#audioList');
+const audioList = document.querySelector("#audioList");
 const playSongsBtn = document.querySelector("#playSongs");
 const togglePauseBtn = document.querySelector("#togglePauseBtn");
 const prevSongBtn = document.querySelector("#prevSongBtn");
@@ -10,12 +10,13 @@ const playlist = document.querySelector("#playlist");
 const volume = document.querySelector("#volume");
 const progressBar = document.querySelector("#progressBar");
 const html = document.querySelector("html");
-const fileInput = document.getElementById('fileInput');
+const fileInput = document.querySelector("#fileInput");
 
 let currentAudioIndex = 0;
 let isPaused = false;
 let isLyricShown = false;
 let lyric = '';
+let lyricScroll = 0;
 
 const audioObj = {
   audioElements: [],
@@ -23,8 +24,42 @@ const audioObj = {
   volume: .5,
 }
 
-fileInput.addEventListener('change', function(event) {
-  const files = event.target.files;
+document.addEventListener("keydown", (e) => {
+  if(audioObj.audioFiles.length > 0) {
+    switch (e.keyCode) {
+      case 80:
+        playPreviousSong();
+        break;
+  
+      case 84:
+        if(currentAudioIndex === 0 && progressBar.value === 0) {
+          playCurrentSong();
+        }
+        else {
+          togglePause();
+        }
+        break;
+  
+      case 78:
+        playIncomingSong();
+        break;
+
+      case 82:
+        restartCurrentSong();
+        break;
+
+      case 76:
+        toggleLyric();
+        break;
+    
+      default:
+        break;
+    }
+  }
+});
+
+fileInput.addEventListener('change', (e) => {
+  const files = e.target.files;
   const mp3Files = [];
 
   audioObj.audioElements = [];
@@ -92,12 +127,6 @@ volume.addEventListener("input", (e) => {
   audioObj.volume = volume;
 })
 
-html.addEventListener("keydown", (e) => {
-  if(e.key === "Alt") {
-    e.preventDefault();
-  }
-})
-
 playSongsBtn.addEventListener("click", (e) => {
   playCurrentSong();
 });
@@ -135,8 +164,6 @@ function playPreviousSong() {
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
 
   playCurrentSong();
-
-  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
 }
 
 function playIncomingSong() {
@@ -151,8 +178,6 @@ function playIncomingSong() {
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
   playCurrentSong();
-
-  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
 }
 
 function playCurrentSong() {
@@ -162,6 +187,8 @@ function playCurrentSong() {
     currentAudio.currentTime = 0;
     currentAudio.play();
     currentAudio.volume = audioObj.volume;
+
+    scrollToSong(currentAudio);
 
     if(isLyricShown) {
       currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
@@ -201,12 +228,38 @@ function playCurrentSong() {
 function updateProgressBar() {
   const currentAudio = audioObj.audioElements[currentAudioIndex];
   const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+
   if(progress) progressBar.value = progress;
 }
 
+// function updateProgressBar() {
+//   const currentAudio = audioObj.audioElements[currentAudioIndex];
+//   const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+
+//   if(progress) progressBar.value = progress;
+
+//   if(isLyricShown) {
+//     const lyricsContainer = document.querySelector('.lyric');
+//     const verses = lyricsContainer.children;
+//     console.log(verses);
+    
+//     // Calculate which lyric should be visible based on audio progress
+//     const currentLyricIndex = Math.floor((currentAudio.currentTime / currentAudio.duration) * verses.length);
+//     console.log(currentLyricIndex);
+
+//     // Scroll to the current lyric if it exists
+//     if(verses[currentLyricIndex]) {
+//       console.log(verses[currentLyricIndex]);
+//       console.log(verses[currentLyricIndex].offsetTop);
+//       playlist.scrollTop = verses[currentLyricIndex].offsetTop;
+//     }
+//   }
+// }
+
 function pauseCurrentSong() {
   const currentAudio = audioObj.audioElements[currentAudioIndex];
-  if (currentAudio) {
+
+  if(currentAudio) {
     currentAudio.pause();
     isPaused = true;
   }
@@ -217,15 +270,17 @@ function pauseCurrentSong() {
 
 function togglePause() {
   const currentAudio = audioObj.audioElements[currentAudioIndex];
-  if (currentAudio) {
-    if (isPaused) {
+
+  if(currentAudio) {
+    if(isPaused) {
       currentAudio.play();
       isPaused = false;
 
       playSongsBtn.style.display = "none";
       togglePauseBtn.style.display = "flex"
       togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
-    } else {
+    }
+    else {
       currentAudio.pause();
       isPaused = true;
 
@@ -250,6 +305,8 @@ function toggleLyric() {
     Array.from(lyric.children).forEach((verse) => {
       verse.remove();
     })
+
+    scrollToSong(audioObj.audioElements[currentAudioIndex]);
   }
   else {
     currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
@@ -261,7 +318,7 @@ function toggleLyric() {
 
     lyric.style.display = "block";
 
-    fetchLyric(currentAudio);
+    scrollToSong(audioObj.audioElements[currentAudioIndex]);
   }
 }
 
@@ -274,9 +331,8 @@ function playSongAtIndex(index) {
   
   pauseCurrentSong();
   currentAudioIndex = index;
-  playCurrentSong();
 
-  if(isLyricShown) fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
+  playCurrentSong();
 }
 
 function restartCurrentSong() {
@@ -292,28 +348,89 @@ async function fetchLyric(songTitle) {
   const artist = songTitle.split(' - ')[0];
   const song = songTitle.split(' - ')[1].replace(".mp3", '');
 
-  const response = await fetch(`https://api.lyrics.ovh/v1/${artist}/${song}`);
-  const fetchedLyric = await response.json();
+  // OLD API
+  // try {
+  //   const response = await fetch(`https://api.lyrics.ovh/v1/${artist}/${song}`);
+  //   const fetchedLyric = await response.json();
 
-  const songLyric = fetchedLyric?.lyrics?.split("\r\n")[1];
+  //   const songLyric = fetchedLyric?.lyrics?.split("\r\n")[1];
 
-  Array.from(lyric.children).forEach((verse) => {
-    verse.remove();
-  })
+  //   Array.from(lyric.children).forEach((verse) => {
+  //     verse.remove();
+  //   })
+  
+  //   if(songLyric) {
+  //     let songVerses = songLyric.split("\n");
+  //     lyric.innerHTML = '';
+  
+  //     songVerses.forEach((verse) => {
+  //       const span = document.createElement("span");
+  //       span.style.display = "block";
+  //       span.innerHTML = verse;
+  
+  //       lyric.appendChild(span);
+  //     })
+  //   }
+  //   else {
+  //     lyric.innerHTML = "Letras não encontradas";
+  //   }
+    
+  // } catch (error) {
+  //   lyric.innerHTML = "Erro na API de letras";
+  // }
 
-  if(songLyric) {
-    let songVerses = songLyric.split("\n");
-    lyric.innerHTML = '';
+  const API_KEY = document.querySelector("#API_KEY").textContent;
+  const URL = "https://api.vagalume.com.br/search.php";
 
-    songVerses.forEach((verse) => {
-      const span = document.createElement("span");
-      span.style.display = "block";
-      span.innerHTML = verse;
+  try {
+    const response = await fetch(`${URL}?art=${artist}&mus=${song}&apikey=${API_KEY}`);
+    const fetchedLyric = await response.json();
 
-      lyric.appendChild(span);
+    // https://api.vagalume.com.br/docs/letras/#apidoc_ex1
+    // https://gist.github.com/lenivene/afb11929910b2dc8cb02
+
+    const songLyric = fetchedLyric?.mus[0]?.text;    
+
+    Array.from(lyric.children).forEach((verse) => {
+      verse.remove();
     })
-  }
-  else {
+  
+    if(songLyric) {
+      let songVerses = songLyric.split("\n");
+      lyric.innerHTML = '';
+  
+      songVerses.forEach((verse) => {
+        const span = document.createElement("span");
+        span.style.display = "block";
+        span.innerHTML = verse;
+  
+        lyric.appendChild(span);
+      })
+    }
+    else {
+      lyric.innerHTML = "Letras não encontradas";
+    }
+    
+  } catch (error) {
     lyric.innerHTML = "Letras não encontradas";
   }
 }
+
+function scrollToSong(song) {
+  if(isLyricShown) {
+    fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
+    playlist.scrollTop = 0;
+  }
+  else {
+    let fudge = 4;
+    let bottom = (playlist.scrollTop + (playlist.offsetHeight - fudge) - song.offsetHeight);
+    let top = playlist.scrollTop + fudge;
+  
+    if(song.offsetTop <= top) {
+      playlist.scrollTop = song.offsetTop - fudge;
+    }
+    else if(song.offsetTop >= bottom) {
+      playlist.scrollTop = song.offsetTop - ((playlist.offsetHeight - fudge) - song.offsetHeight) ;
+    }
+  }
+};
