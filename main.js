@@ -1,7 +1,7 @@
 const { app, BrowserWindow, globalShortcut  } = require('electron');
 const path = require('node:path');
 
-const isDev = true;
+const isDev = false;
 
 const createWindow = async () => {
   const win = new BrowserWindow({
@@ -35,6 +35,18 @@ const createWindow = async () => {
 
   globalShortcut.register('CommandOrControl+num4', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'r'});
+  });
+
+  globalShortcut.register('CommandOrControl+num1', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'd'});
+  });
+
+  globalShortcut.register('CommandOrControl+num2', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'm'});
+  });
+
+  globalShortcut.register('CommandOrControl+num3', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'u'});
   });
 
   win.loadFile(path.join(__dirname, "src/index.html"));
