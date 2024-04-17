@@ -13,7 +13,7 @@ const html = document.querySelector("html");
 const fileInput = document.querySelector("#fileInput");
 const loader = document.querySelector(".loader");
 
-// Aplicar lazy Loading
+// Feat - Performance changes
 
 let currentAudioIndex = 0;
 let isPaused = false;
@@ -76,57 +76,7 @@ document.addEventListener("keydown", (e) => {
 fileInput.addEventListener('change', (e) => {
   const files = e.target.files;
 
-  // loadSongs(files);
-
-  const mp3Files = [];
-
-  audioObj.audioElements = [];
-  audioObj.audioFiles = [];
-  audioObj.volume = volume.value;
-  
-  Array.from(playlist.children).forEach((li) => {
-    if(!Array.from(li.classList).includes("loader")) {
-      li.remove();
-    }
-  })
-
-  audioList.innerHTML = '';
-  currentAudioIndex = 0;
-  progressBar.value = 0;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    if (file.type === "audio/mp3" || file.type === "audio/mpeg") {
-      mp3Files.push(file);
-
-      const audio = document.createElement('audio');
-      audio.controls = true;
-
-      const source = document.createElement('source');
-      source.src = URL.createObjectURL(file);
-      audio.appendChild(source);
-
-      audioObj.audioElements.push(audio);
-
-      const listItem = document.createElement('li');
-      listItem.appendChild(audio);
-      audioList.appendChild(listItem);
-
-      const songItem = document.createElement("li");
-      songItem.textContent = file.name.replace(".mp3", '');
-      songItem.classList.add("song");
-      playlist.appendChild(songItem);
-
-      songItem.addEventListener("click", () => {
-        document.querySelectorAll("li").forEach((song) => {
-          song.classList.remove("songPlaying")
-        })
-        playSongAtIndex(Array.from(playlist.children).indexOf(songItem));
-      });
-    }
-  }
-
-  audioObj.audioFiles.push(...mp3Files);
+  loadSongs(files);
   
   playSongsBtn.style.display = "flex";
   togglePauseBtn.style.display = "none";
@@ -142,9 +92,9 @@ fileInput.addEventListener('change', (e) => {
 
 volume.addEventListener("input", (e) => {
   const volume = e.target.value;
-  const currentSong = audioObj.audioElements[currentAudioIndex];
+  const currentAudio = getCurrentAudio();
 
-  if(currentSong) currentSong.volume = volume;
+  if(currentAudio) currentAudio.volume = volume;
   audioObj.volume = volume;
 })
 
@@ -176,22 +126,23 @@ progressBar.addEventListener('click', (e) => {
   const clickedX = e.clientX - progressBar.getBoundingClientRect().left;
   const progressBarWidth = progressBar.offsetWidth;
   const clickedPercentage = (clickedX / progressBarWidth) * 100;
-  const audio = audioObj.audioElements[currentAudioIndex];
+  const currentAudio = getCurrentAudio();
 
-  if(audio) {
-    const newTime = (clickedPercentage / 100) * audio.duration;
-    audio.currentTime = newTime;
+  if(currentAudio) {
+    const newTime = (clickedPercentage / 100) * currentAudio.duration;
+    currentAudio.currentTime = newTime;
     updateProgressBar();
   }
 });
 
 function playPreviousSong() {
   pauseCurrentSong();
-  currentAudioIndex--;
 
-  if (currentAudioIndex < 0) {
-    currentAudioIndex = audioObj.audioElements.length - 1;
-  }
+  currentAudioIndex--; 
+  
+  if(currentAudioIndex < 0) {
+    currentAudioIndex = audioObj.audioFiles.length - 1;
+  } 
 
   playSongsBtn.style.display = "none";
   togglePauseBtn.style.display = "flex";
@@ -203,9 +154,12 @@ function playPreviousSong() {
 
 function playIncomingSong() {
   pauseCurrentSong();
-  currentAudioIndex++;
-  if (currentAudioIndex >= audioObj.audioElements.length) {
+  
+  if(currentAudioIndex === audioObj.audioFiles.length - 1) {
     currentAudioIndex = 0;
+  }
+  else {
+    currentAudioIndex++;
   }
 
   playSongsBtn.style.display = "none";
@@ -217,87 +171,77 @@ function playIncomingSong() {
 }
 
 function playCurrentSong() {
-  const currentAudio = audioObj.audioElements[currentAudioIndex];
-
-  // if(currentAudioIndex === 0) {
-  //   const currentAudio = mountSongElement(audioObj.audioFiles[0]);
-  //   console.log(currentAudio);
-  // }
+  const currentAudio = mountSongElement(audioObj.audioFiles[currentAudioIndex]);
 
   if(currentAudio) {
     currentAudio.currentTime = 0;
-    currentAudio.play();
     currentAudio.volume = audioObj.volume;
+    progressBar.value = 0;
+    isPaused = false;
+
+    currentAudio.play();
 
     if(isLyricShown) {
       currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
     }
-
-    progressBar.value = 0;
 
     document.querySelectorAll("li").forEach((song) => {
       song.classList.remove("songPlaying")
     })
 
     playlist.children[currentAudioIndex].classList.toggle("songPlaying");
-
-    isPaused = false;
     
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
 
-    // Remove previous timeupdate event listener
     currentAudio.removeEventListener('timeupdate', updateProgressBar);
-
     currentAudio.addEventListener('timeupdate', updateProgressBar);
-
     currentAudio.addEventListener('ended', () => {
-      if(currentAudioIndex != audioObj.audioElements.length - 1) {        
+      if(currentAudioIndex != audioObj.audioFiles.length - 1) {        
         playIncomingSong();
       }
       else {
         currentAudioIndex = 0;
         playSongsBtn.style.display = "flex";
         togglePauseBtn.style.display = "none";
+        playIncomingSong();
       }
     });
   }
-
 }
 
 function updateProgressBar() {
-  const currentAudio = audioObj.audioElements[currentAudioIndex];
-  const progress = (currentAudio.currentTime / currentAudio.duration) * 100;
+  const currentAudio = getCurrentAudio();
+  const progress = (currentAudio?.currentTime / currentAudio?.duration) * 100;
 
   if(progress) progressBar.value = progress;
 
-  if(isLyricShown) {
-    const lyricsContainer = document.querySelector('.lyric');
-    const verses = lyricsContainer.children;
+  // if(isLyricShown) {
+  //   const lyricsContainer = document.querySelector('.lyric');
+  //   const verses = lyricsContainer.children;
 
-    if(verses.length > 0) {
-      Array.from(verses).forEach((verse) => {
-        verse.classList.remove("versePlayling");
-      })
+  //   if(verses.length > 0) {
+  //     Array.from(verses).forEach((verse) => {
+  //       verse.classList.remove("versePlayling");
+  //     })
 
-      if(progressBar.value < 100) {
-        const scrollBarValue = parseInt((Math.floor(progressBar.value) / 100) * verses.length);
+  //     if(progressBar.value < 100) {
+  //       const scrollBarValue = parseInt((Math.floor(progressBar.value) / 100) * verses.length);
 
-        if(scrollBarValue !== lyricScroll) {
-          console.log(scrollBarValue);
-          playlist.scrollBy(0, 21);
+  //       if(scrollBarValue !== lyricScroll) {
+  //         playlist.scrollBy(0, 21);
 
-          lyricScroll = scrollBarValue;
-        }
+  //         lyricScroll = scrollBarValue;
+  //       }
 
-        verses[scrollBarValue].classList.add("versePlayling");
-      }
-    }
-  }
+  //       verses[scrollBarValue].classList.add("versePlayling");
+  //     }
+  //   }
+  // }
 }
 
 function pauseCurrentSong() {
-  const currentAudio = audioObj.audioElements[currentAudioIndex];
+  const currentAudio = getCurrentAudio()
 
   if(currentAudio) {
     currentAudio.pause();
@@ -309,7 +253,7 @@ function pauseCurrentSong() {
 }
 
 function togglePause() {
-  const currentAudio = audioObj.audioElements[currentAudioIndex];
+  const currentAudio = getCurrentAudio();
 
   if(currentAudio) {
     if(isPaused) {
@@ -360,7 +304,7 @@ function toggleLyric() {
 
     fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
     
-    playlist.scrollBy(0, 900);
+    playlist.scrollBy(0, 0);
   }
 }
 
@@ -379,7 +323,7 @@ function playSongAtIndex(index) {
 }
 
 function restartCurrentSong() {
-  const currentAudio = audioObj.audioElements[currentAudioIndex];
+  const currentAudio = getCurrentAudio();
 
   if(currentAudio) {
     currentAudio.currentTime = 0;
@@ -390,37 +334,6 @@ function restartCurrentSong() {
 async function fetchLyric(songTitle) {
   const artist = songTitle.split(' - ')[0];
   const song = songTitle.split(' - ')[1].replace(".mp3", '');
-
-  // OLD API
-  // try {
-  //   const response = await fetch(`https://api.lyrics.ovh/v1/${artist}/${song}`);
-  //   const fetchedLyric = await response.json();
-
-  //   const songLyric = fetchedLyric?.lyrics?.split("\r\n")[1];
-
-  //   Array.from(lyric.children).forEach((verse) => {
-  //     verse.remove();
-  //   })
-  
-  //   if(songLyric) {
-  //     let songVerses = songLyric.split("\n");
-  //     lyric.innerHTML = '';
-  
-  //     songVerses.forEach((verse) => {
-  //       const span = document.createElement("span");
-  //       span.style.display = "block";
-  //       span.innerHTML = verse;
-  
-  //       lyric.appendChild(span);
-  //     })
-  //   }
-  //   else {
-  //     lyric.innerHTML = "Letras não encontradas";
-  //   }
-    
-  // } catch (error) {
-  //   lyric.innerHTML = "Erro na API de letras";
-  // }
 
   const API_KEY = document.querySelector("#API_KEY").textContent;
   const URL = "https://api.vagalume.com.br/search.php";
@@ -527,69 +440,74 @@ function handleVolume(code) {
       break;
   }
 
-  audioObj.audioElements[currentAudioIndex].volume = newVolume;
+  getCurrentAudio().volume = newVolume;
 }
 
-// function loadSongs (files) {
-//   audioObj.audioElements = [];
-//   audioObj.audioFiles = [];
-//   audioObj.volume = volume.value;
+function loadSongs (files) {
+  audioObj.audioElements = [];
+  audioObj.audioFiles = [];
+  audioObj.volume = volume.value;
 
-//   Array.from(playlist.children).forEach((li) => {
-//     if(!Array.from(li.classList).includes("loader")) {
-//       li.remove();
-//     }
-//   })
+  Array.from(playlist.children).forEach((li) => {
+    if(!Array.from(li.classList).includes("loader")) {
+      li.remove();
+    }
+  })
 
-//   audioList.innerHTML = '';
-//   progressBar.value = 0;
+  audioList.innerHTML = '';
+  progressBar.value = 0;
 
-//   Array.from(files).forEach((file) => {
-//     audioObj.audioFiles.push(file);
+  Array.from(files).forEach((file) => {
+    audioObj.audioFiles.push(file);
 
-//     const songItem = document.createElement("li");
-//     songItem.textContent = file.name.replace(".mp3", '');
-//     songItem.classList.add("song");
-//     playlist.appendChild(songItem);
+    const songItem = document.createElement("li");
+    songItem.textContent = file.name.replace(".mp3", '');
+    songItem.classList.add("song");
+    playlist.appendChild(songItem);
 
-//     songItem.addEventListener("click", () => {
-//       document.querySelectorAll("li").forEach((song) => {
-//         song.classList.remove("songPlaying")
-//       })
-//       playSongAtIndex(Array.from(playlist.children).indexOf(songItem));
-//     });
-//   })
+    songItem.addEventListener("click", () => {
+      document.querySelectorAll("li").forEach((song) => {
+        song.classList.remove("songPlaying")
+      })
+      playSongAtIndex(Array.from(playlist.children).indexOf(songItem));
+    });
+  })
 
-//   console.log(audioObj.audioFiles);
-// }
+}
 
-// function mountSongElement(file) {
-//   console.log(file);
+function mountSongElement(file) {
+  if(audioObj.audioElements.length > 0) {
+    dismountSongsElement();
+  }
 
-//   if(file.type === "audio/mp3" || file.type === "audio/mpeg") {
-//     if(currentAudioIndex === 0) {
-//       const audio = document.createElement('audio');
-//       audio.controls = true;
-  
-//       const source = document.createElement('source');
-//       source.src = URL.createObjectURL(file);
-//       audio.appendChild(source);
-  
-//       audioObj.audioElements.push(audio);
-  
-//       const listItem = document.createElement('li');
-//       listItem.appendChild(audio);
-//       audioList.appendChild(listItem);
-  
-//       const songItem = document.createElement("li");
-//       songItem.textContent = file.name.replace(".mp3", '');
-//       songItem.classList.add("song");
-//       playlist.appendChild(songItem);
-//     }
-//     else {
+  if(file.type === "audio/mp3" || file.type === "audio/mpeg") {
+    const audio = document.createElement('audio');
+    audio.setAttribute("data-id", currentAudioIndex)
+    audio.controls = true;
 
-//     }
-//   }
+    const source = document.createElement('source');
+    source.src = URL.createObjectURL(file);
+    audio.appendChild(source);
 
-//   console.log(audioObj.audioElements);
-// }
+    audioObj.audioElements.push(audio);
+
+    const listItem = document.createElement('li');
+    listItem.appendChild(audio);
+    audioList.appendChild(listItem);
+
+    return audio;    
+  }
+}
+
+function dismountSongsElement() {
+  audioObj.audioElements = [];
+
+  Array.from(audioList.children).forEach((li) => {
+    li.remove();
+  })
+}
+
+function getCurrentAudio() {
+  const audio = document.querySelector(`[data-id="${currentAudioIndex}"]`);
+  return audio;
+}
