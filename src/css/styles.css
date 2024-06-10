@@ -96,10 +96,26 @@ body {
   color: #EEEEEE;
 }
 
-#currentSongPlaying {
+#currentSongPlayingContainer {
+  display: none;
+  overflow: hidden;
   text-align: center;
+}
+
+#currentSongPlaying {
   color: #EEEEEE;
   margin-bottom: 5px;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.scroll {
+  animation: scroll infinite 10s linear;
+}
+
+@keyframes scroll {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
 }
 
 #currentSongPlaying span, .versePlayling {

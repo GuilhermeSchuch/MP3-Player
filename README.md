@@ -44,13 +44,15 @@ This software has a lyrics screen that highlights the current verse being sung (
 |SHORTCUT                        |ACTION                         
 |--------------------------------|-------------------------------
 |CommandOrControl+num9           |`Play next song`
-|CommandOrControl+num8           |`Toogle pause/play`
+|CommandOrControl+num8           |`Toggle pause/play`
 |CommandOrControl+num7           |`Play previous song`
-|CommandOrControl+num5           |`Toogle lyrics`
+|CommandOrControl+num6           |`Toggle lyrics auto scroll`
+|CommandOrControl+num5           |`Toggle lyrics`
 |CommandOrControl+num4           |`Restart song`
 |CommandOrControl+num3           |`Volume up`
-|CommandOrControl+num2           |`Toogle mute/unmute`
+|CommandOrControl+num2           |`Toggle mute/unmute`
 |CommandOrControl+num1           |`Volume down`
+|CommandOrControl+num0           |`Toggle playlist loop`
 
 
 ## Contact

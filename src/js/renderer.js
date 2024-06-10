@@ -1,30 +1,34 @@
-const audioList = document.querySelector("#audioList");
-const playSongsBtn = document.querySelector("#playSongs");
-const togglePauseBtn = document.querySelector("#togglePauseBtn");
-const prevSongBtn = document.querySelector("#prevSongBtn");
-const nextSongBtn = document.querySelector("#nextSongBtn");
-const backwardBtn = document.querySelector("#backwardBtn");
-const currentSongPlaying = document.querySelector("#currentSongPlaying");
-const toggleLyricBtn = document.querySelector("#toggleLyricBtn");
-const playlist = document.querySelector("#playlist");
-const volume = document.querySelector("#volume");
-const progressBar = document.querySelector("#progressBar");
-const html = document.querySelector("html");
-const fileInput = document.querySelector("#fileInput");
-const loader = document.querySelector(".loader");
-
-// Feat - Performance changes
+const audioList                   = document.querySelector("#audioList");
+const playSongsBtn                = document.querySelector("#playSongs");
+const togglePauseBtn              = document.querySelector("#togglePauseBtn");
+const prevSongBtn                 = document.querySelector("#prevSongBtn");
+const nextSongBtn                 = document.querySelector("#nextSongBtn");
+const backwardBtn                 = document.querySelector("#backwardBtn");
+const currentSongPlaying          = document.querySelector("#currentSongPlaying");
+const currentSongPlayingContainer = document.querySelector("#currentSongPlayingContainer");
+const toggleLyricBtn              = document.querySelector("#toggleLyricBtn");
+const playlist                    = document.querySelector("#playlist");
+const volume                      = document.querySelector("#volume");
+const progressBar                 = document.querySelector("#progressBar");
+const html                        = document.querySelector("html");
+const fileInput                   = document.querySelector("#fileInput");
+const loader                      = document.querySelector(".loader");
 
 let currentAudioIndex = 0;
 let isPaused = false;
-let isLyricShown = false;
+let isLoop = true;
 let lyric = '';
-let lyricScroll = null;
 
 const audioObj = {
   audioElements: [],
   audioFiles: [],
   volume: .5,
+}
+
+const lyricObj = {
+  isLyricShown: false,
+  lyricScroll: null,
+  lyricAutoScroll: false
 }
 
 document.addEventListener("keydown", (e) => {
@@ -65,6 +69,14 @@ document.addEventListener("keydown", (e) => {
 
       case 68:
         handleVolume(68);
+        break;
+
+      case 65:
+        toggleLyricAutoScroll();
+        break;
+
+      case 75:
+        toggleLoop();
         break;
     
       default:
@@ -181,12 +193,20 @@ function playCurrentSong() {
 
     currentAudio.play();
 
-    if(isLyricShown) {
+    if(lyricObj.isLyricShown) {
+      playlist.scrollTo(0, 0);
       currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
+
+      if(currentSongPlaying.textContent.length > 48) {
+        currentSongPlaying.classList.add("scroll")
+      }
+      else {
+        currentSongPlaying.classList.remove("scroll");
+      }
     }
 
     document.querySelectorAll("li").forEach((song) => {
-      song.classList.remove("songPlaying")
+      song.classList.remove("songPlaying");
     })
 
     playlist.children[currentAudioIndex].classList.toggle("songPlaying");
@@ -197,13 +217,15 @@ function playCurrentSong() {
     currentAudio.removeEventListener('timeupdate', updateProgressBar);
     currentAudio.addEventListener('timeupdate', updateProgressBar);
     currentAudio.addEventListener('ended', () => {
-      if(currentAudioIndex != audioObj.audioFiles.length - 1) {        
-        playIncomingSong();
+      if(currentAudioIndex === audioObj.audioFiles.length - 1) {
+        if(!isLoop) {
+          
+        }
+        else{
+          playIncomingSong();
+        }
       }
       else {
-        currentAudioIndex = 0;
-        playSongsBtn.style.display = "flex";
-        togglePauseBtn.style.display = "none";
         playIncomingSong();
       }
     });
@@ -215,29 +237,44 @@ function updateProgressBar() {
   const progress = (currentAudio?.currentTime / currentAudio?.duration) * 100;
 
   if(progress) progressBar.value = progress;
+  
+  if(lyricObj.lyricAutoScroll) {
+    const lyricsContainer = document.querySelector('.lyric');
+    const verses = lyricsContainer.children;
 
-  // if(isLyricShown) {
-  //   const lyricsContainer = document.querySelector('.lyric');
-  //   const verses = lyricsContainer.children;
+    if(verses.length > 0) {
+      Array.from(verses).forEach((verse) => {
+        verse.classList.remove("versePlayling");
+      })
 
-  //   if(verses.length > 0) {
-  //     Array.from(verses).forEach((verse) => {
-  //       verse.classList.remove("versePlayling");
-  //     })
+      if(progressBar.value < 100) {
+        const scrollBarValue = parseInt((Math.floor(progressBar.value) / 100) * verses.length);
 
-  //     if(progressBar.value < 100) {
-  //       const scrollBarValue = parseInt((Math.floor(progressBar.value) / 100) * verses.length);
+        if(scrollBarValue !== lyricObj.lyricScroll) {
+          playlist.scrollBy(0, 21);
 
-  //       if(scrollBarValue !== lyricScroll) {
-  //         playlist.scrollBy(0, 21);
+          lyricObj.lyricScroll = scrollBarValue;
+        }
 
-  //         lyricScroll = scrollBarValue;
-  //       }
+        verses[scrollBarValue].classList.add("versePlayling");
+      }
+    }
+  }
+}
 
-  //       verses[scrollBarValue].classList.add("versePlayling");
-  //     }
-  //   }
-  // }
+function toggleLyricAutoScroll() {
+  lyricObj.lyricAutoScroll = !lyricObj.lyricAutoScroll;
+
+  if(!lyricObj.lyricAutoScroll) {
+    const lyricsContainer = document.querySelector('.lyric');
+    const verses = lyricsContainer.children;
+    
+    Array.from(verses).forEach((verse) => {
+      verse.classList.remove("versePlayling");
+    })
+
+    playlist.scrollTo(0, 0);
+  }
 }
 
 function pauseCurrentSong() {
@@ -276,9 +313,10 @@ function togglePause() {
 function toggleLyric() {
   const currentAudio = audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '');
 
-  if(isLyricShown) {
+  if(lyricObj.isLyricShown) {
     currentSongPlaying.innerHTML = ``;
-    isLyricShown = false;
+    currentSongPlayingContainer.style.display = "none";
+    lyricObj.isLyricShown = false;
 
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "block";
@@ -293,8 +331,9 @@ function toggleLyric() {
     scrollToSong({ atIndex: true });
   }
   else {
+    currentSongPlayingContainer.style.display = "block";
     currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
-    isLyricShown = true;
+    lyricObj.isLyricShown = true;
 
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "none";
@@ -304,7 +343,7 @@ function toggleLyric() {
 
     fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
     
-    playlist.scrollBy(0, 0);
+    // playlist.scrollTo(0, 0);
   }
 }
 
@@ -377,7 +416,7 @@ async function fetchLyric(songTitle) {
 }
 
 function scrollToSong({ type = null, atIndex = false }) {
-  if(!isLyricShown) {
+  if(!lyricObj.isLyricShown) {
     if(atIndex) {
       playlist.scrollTo(0, 0);
       playlist.scrollBy(0, currentAudioIndex * 21);
@@ -510,4 +549,8 @@ function dismountSongsElement() {
 function getCurrentAudio() {
   const audio = document.querySelector(`[data-id="${currentAudioIndex}"]`);
   return audio;
+}
+
+function toggleLoop() {
+  isLoop = !isLoop;
 }
