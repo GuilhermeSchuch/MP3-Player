@@ -197,8 +197,11 @@ function playCurrentSong() {
       playlist.scrollTo(0, 0);
       currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
 
+      console.log(currentSongPlaying.innerHTML);
+      console.log(currentSongPlaying.length);
+
       if(currentSongPlaying.textContent.length > 48) {
-        currentSongPlaying.classList.add("scroll")
+        currentSongPlaying.classList.add("scroll");
       }
       else {
         currentSongPlaying.classList.remove("scroll");
@@ -318,6 +321,8 @@ function toggleLyric() {
     currentSongPlayingContainer.style.display = "none";
     lyricObj.isLyricShown = false;
 
+
+
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "block";
     })
@@ -332,8 +337,17 @@ function toggleLyric() {
   }
   else {
     currentSongPlayingContainer.style.display = "block";
-    currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
+    // currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
     lyricObj.isLyricShown = true;
+
+    currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;      
+
+    if(currentSongPlaying.textContent.length > 48) {
+      currentSongPlaying.classList.add("scroll");
+    }
+    else {
+      currentSongPlaying.classList.remove("scroll");
+    }
 
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "none";
