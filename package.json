@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "electron": "nodemon --exec electron ."
+    "electron": "nodemon --exec electron . --disable-http-cache"
   },
   "author": "Guilherme Schuch",
   "license": "MIT",

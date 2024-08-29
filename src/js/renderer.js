@@ -1,3 +1,4 @@
+// Global elements
 const audioList                   = document.querySelector("#audioList");
 const playSongsBtn                = document.querySelector("#playSongs");
 const togglePauseBtn              = document.querySelector("#togglePauseBtn");
@@ -14,6 +15,7 @@ const html                        = document.querySelector("html");
 const fileInput                   = document.querySelector("#fileInput");
 const loader                      = document.querySelector(".loader");
 
+// Global configuration
 let currentAudioIndex = 0;
 let isPaused = false;
 let isLoop = true;
@@ -31,6 +33,102 @@ const lyricObj = {
   lyricAutoScroll: false
 }
 
+const configObj = {
+  isSettingsShown: false,
+  settingsElement: null,
+  getUserSettings: async () => {
+    const config = await window.electronAPI.loadConfig();
+    return config;
+  },
+  saveUserSettings: async (newConfig) => {
+    await window.electronAPI.saveConfig(newConfig);
+  },
+  settings: {
+    element: "div",
+    classList: ["checkContainer"],
+    children: [
+      {element: "p", textContent: true},
+      {element: "div", classList: ["check"], children: [
+        {element: "input", attributes: [
+          {name: "id", value: "FILL"},
+          {name: "type", value: "checkbox"},
+          {name: "name", value: "FILL"},          
+          {name: "data-name", value: "DATA-NAME"}
+        ]},
+        {element: "label", attributes: [{name: "for", value: "FILL"}]},
+      ]},
+    ]
+  },
+  createElement: async () => {
+    if (!configObj.settingsElement) {
+      const settingsContainer = document.createElement("div");
+      settingsContainer.classList.add("settingsContainer");
+
+      const settingsHeader = document.createElement("div");
+      settingsHeader.classList.add("settingsHeader");
+
+      const title = document.createElement("h3");
+      title.innerHTML = "Configurações";
+      settingsHeader.appendChild(title);
+
+      const settingsContent = document.createElement("div");
+      settingsContent.classList.add("settingsContent");
+
+      const userSettings = await configObj.getUserSettings();
+      const settings = configObj.settings;
+
+      userSettings.forEach((userSetting) => {
+        const checkContainer = document.createElement(settings.element);
+        settings.classList.forEach((item) => checkContainer.classList.add(item));
+
+        settings.children.forEach((child) => {
+          const element = document.createElement(child.element);
+
+          if(child.textContent) element.textContent = userSetting.text;
+
+          if(child.classList) {
+            child.classList.forEach((item) => element.classList.add(item))
+          }
+
+          if(child.children) {
+            child.children.forEach((item) => {
+              const elementChild = document.createElement(item.element);
+
+              item.attributes.forEach((attr) => {
+                let attrVlue = attr.value;
+                if (attrVlue === "FILL") attrVlue = userSetting.name;
+                if (attrVlue === "DATA-NAME") attrVlue = userSetting.text;
+
+                if(userSetting.value) {
+                  elementChild.setAttribute("checked", true);
+                }
+                else {
+                  elementChild.removeAttribute("checked");
+                }
+
+                elementChild.setAttribute(attr.name, attrVlue);
+              })
+
+              element.appendChild(elementChild);
+            })
+          }
+
+          checkContainer.appendChild(element);
+        })
+        settingsContent.appendChild(checkContainer);
+      })
+
+      settingsContainer.appendChild(settingsHeader);
+      settingsContainer.appendChild(settingsContent);
+
+      configObj.settingsElement = settingsContainer;
+    }
+
+    return configObj.settingsElement;
+  }
+};
+
+// Listeners
 document.addEventListener("keydown", (e) => {
   if(audioObj.audioFiles.length > 0) {
     switch (e.keyCode) {
@@ -131,7 +229,8 @@ backwardBtn.addEventListener("click", (e) => {
 });
 
 toggleLyricBtn.addEventListener("click", (e) => {
-  toggleLyric();
+  toggleSettings();
+  // toggleLyric();
 });
 
 progressBar.addEventListener('click', (e) => {
@@ -195,10 +294,7 @@ function playCurrentSong() {
 
     if(lyricObj.isLyricShown) {
       playlist.scrollTo(0, 0);
-      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
-
-      console.log(currentSongPlaying.innerHTML);
-      console.log(currentSongPlaying.length);
+      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;      
 
       if(currentSongPlaying.textContent.length > 48) {
         currentSongPlaying.classList.add("scroll");
@@ -321,8 +417,6 @@ function toggleLyric() {
     currentSongPlayingContainer.style.display = "none";
     lyricObj.isLyricShown = false;
 
-
-
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "block";
     })
@@ -337,7 +431,6 @@ function toggleLyric() {
   }
   else {
     currentSongPlayingContainer.style.display = "block";
-    // currentSongPlaying.innerHTML = `Tocando agora: <span>${currentAudio}</span>`;
     lyricObj.isLyricShown = true;
 
     currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;      
@@ -357,7 +450,63 @@ function toggleLyric() {
 
     fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
     
-    // playlist.scrollTo(0, 0);
+  }
+}
+
+async function toggleSettings() {
+  const settings = await configObj.createElement();
+
+  if(configObj.isSettingsShown) {
+    configObj.isSettingsShown = false;
+
+    currentSongPlaying.innerHTML = ``;
+    currentSongPlayingContainer.style.display = "none";
+    
+    settings.remove();
+
+    Array.from(playlist.children).forEach((song) => {
+      song.style.display = "block";
+    })
+
+    scrollToSong({ atIndex: true });
+  }
+  else {
+    configObj.isSettingsShown = true;
+
+    if(currentSongPlaying.innerHTML.length > 0) {
+      currentSongPlayingContainer.style.display = "block";
+      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
+
+      if(currentSongPlaying.textContent.length > 48) {
+        currentSongPlaying.classList.add("scroll");
+      }
+      else {
+        currentSongPlaying.classList.remove("scroll");
+      }
+    }
+
+    Array.from(playlist.children).forEach((song) => {
+      song.style.display = "none";
+    })
+
+    playlist.appendChild(settings);
+
+    const settingsCheckboxs = document.querySelectorAll("input[type='checkbox']");
+    
+    settingsCheckboxs.forEach((checkbox) => {
+      checkbox.addEventListener("change", async () => {
+        const newConfig = [];
+
+        settingsCheckboxs.forEach((settingCheckbox) => {
+          const { name, checked: value } = settingCheckbox;
+          const text = checkbox.getAttribute("data-name");
+
+          newConfig.push({name, text, value});
+        })
+
+        await configObj.saveUserSettings(newConfig);
+      })
+    })
   }
 }
 
@@ -394,9 +543,6 @@ async function fetchLyric(songTitle) {
   try {
     const response = await fetch(`${URL}?art=${artist}&mus=${song}&apikey=${API_KEY}`);
     const fetchedLyric = await response.json();
-
-    // https://api.vagalume.com.br/docs/letras/#apidoc_ex1
-    // https://gist.github.com/lenivene/afb11929910b2dc8cb02
 
     const songLyric = fetchedLyric?.mus[0]?.text;    
 

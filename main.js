@@ -1,7 +1,25 @@
-const { app, BrowserWindow, globalShortcut  } = require('electron');
-const path = require('node:path');
+// Imports
+const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
+const fs = require("node:fs");
+const path = require("node:path");
 
+// Global Variables
+const configPath = path.join(__dirname, "config.json");
 const isDev = false;
+
+// Get user settings from config.json file
+ipcMain.handle("load-config", () => {  
+  if(fs.existsSync(configPath)) {
+    const data = fs.readFileSync(configPath, 'utf-8');
+    if(data) return JSON.parse(data);
+  }
+  return [];
+});
+
+// Save user settings into config.json file
+ipcMain.handle("save-config", (event, newConfig) => {
+  fs.writeFileSync(configPath, JSON.stringify(newConfig));
+});
 
 const createWindow = async () => {
   const win = new BrowserWindow({
@@ -13,7 +31,7 @@ const createWindow = async () => {
     icon: path.join(__dirname, "src/assets/icon.ico"),
     autoHideMenuBar: true,    
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.js')
     },
   })
 

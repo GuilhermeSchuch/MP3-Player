@@ -1,0 +1,17 @@
+[
+  {
+    "name": "shuffle",
+    "text": "Aleatório",
+    "value": false
+  },
+  {
+    "name": "loop",
+    "text": "Loop",
+    "value" :true
+  },
+  {
+    "name": "lyricsAutoScroll",
+    "text": "Letras Auto Scroll",
+    "value": false
+  }
+]
