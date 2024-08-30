@@ -35,47 +35,54 @@ const createWindow = async () => {
     },
   })
 
-  // Song shortcuts
+  // Play next song
+  globalShortcut.register('CommandOrControl+num9', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'n'});
+  });
+  
+  // Play/Pause current song
   globalShortcut.register('CommandOrControl+num8', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 't'});
   });
 
-  globalShortcut.register('CommandOrControl+num9', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'n'});
-  });
-
+  // Play previous song
   globalShortcut.register('CommandOrControl+num7', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'p'});
   });
 
-  globalShortcut.register('CommandOrControl+num4', () => {
+  // Forward 1 sec
+  globalShortcut.register('CommandOrControl+num6', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'f'});
+  });
+
+  // Restart song
+  globalShortcut.register('CommandOrControl+num5', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'r'});
   });
 
-  globalShortcut.register('CommandOrControl+num0', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'k'});
+  // Go back 1 sec
+  globalShortcut.register('CommandOrControl+num4', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'b'});
+  });
+  
+  // Volume up
+  globalShortcut.register('CommandOrControl+num3', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'u'});
   });
 
-  // Lyrics shortcuts
-  globalShortcut.register('CommandOrControl+num5', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'l'});
-  });
-
-  globalShortcut.register('CommandOrControl+num6', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'a'});
-  });
-
-  // Volume shortcuts
-  globalShortcut.register('CommandOrControl+num1', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'd'});
-  });
-
+  // Mute
   globalShortcut.register('CommandOrControl+num2', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'm'});
   });
 
-  globalShortcut.register('CommandOrControl+num3', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'u'});
+  // Vomule down
+  globalShortcut.register('CommandOrControl+num1', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'd'});
+  });
+
+  // Toggle Lyric
+  globalShortcut.register('CommandOrControl+num0', () => {
+    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'l'});
   });
 
   win.loadFile(path.join(__dirname, "src/index.html"));

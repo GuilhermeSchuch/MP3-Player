@@ -7,7 +7,7 @@ const nextSongBtn                 = document.querySelector("#nextSongBtn");
 const backwardBtn                 = document.querySelector("#backwardBtn");
 const currentSongPlaying          = document.querySelector("#currentSongPlaying");
 const currentSongPlayingContainer = document.querySelector("#currentSongPlayingContainer");
-const toggleLyricBtn              = document.querySelector("#toggleLyricBtn");
+const toggleSettingsbtn           = document.querySelector("#toggleSettingsbtn");
 const playlist                    = document.querySelector("#playlist");
 const volume                      = document.querySelector("#volume");
 const progressBar                 = document.querySelector("#progressBar");
@@ -19,6 +19,8 @@ const loader                      = document.querySelector(".loader");
 let currentAudioIndex = 0;
 let isPaused = false;
 let isLoop = true;
+let isShuffle = false;
+let isLyricsAutoScroll = false;
 let lyric = '';
 
 const audioObj = {
@@ -173,8 +175,12 @@ document.addEventListener("keydown", (e) => {
         toggleLyricAutoScroll();
         break;
 
-      case 75:
-        toggleLoop();
+      case 70:
+        forwardOrBackSong(1);
+        break;
+
+      case 66:
+        forwardOrBackSong(-1);
         break;
     
       default:
@@ -183,9 +189,8 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-fileInput.addEventListener('change', (e) => {
+fileInput.addEventListener('change', async (e) => {
   const files = e.target.files;
-
   loadSongs(files);
   
   playSongsBtn.style.display = "flex";
@@ -198,6 +203,9 @@ fileInput.addEventListener('change', (e) => {
   document.querySelectorAll("button").forEach((button) => {
     button.disabled = false;
   });
+
+  if(configObj.isSettingsShown) configObj.isSettingsShown = false;
+  await parseConfigs();
 });
 
 volume.addEventListener("input", (e) => {
@@ -228,9 +236,8 @@ backwardBtn.addEventListener("click", (e) => {
   restartCurrentSong();
 });
 
-toggleLyricBtn.addEventListener("click", (e) => {
+toggleSettingsbtn.addEventListener("click", (e) => {
   toggleSettings();
-  // toggleLyric();
 });
 
 progressBar.addEventListener('click', (e) => {
@@ -281,7 +288,12 @@ function playIncomingSong() {
   playCurrentSong();
 }
 
-function playCurrentSong() {
+async function playCurrentSong() {
+  if(isShuffle) {
+    currentAudioIndex = getRandomNumber(audioObj.audioFiles.length - 1);
+    scrollToSong({ atIndex: true });
+  }
+  
   const currentAudio = mountSongElement(audioObj.audioFiles[currentAudioIndex]);
 
   if(currentAudio) {
@@ -469,6 +481,8 @@ async function toggleSettings() {
     })
 
     scrollToSong({ atIndex: true });
+
+    await parseConfigs();
   }
   else {
     configObj.isSettingsShown = true;
@@ -499,7 +513,7 @@ async function toggleSettings() {
 
         settingsCheckboxs.forEach((settingCheckbox) => {
           const { name, checked: value } = settingCheckbox;
-          const text = checkbox.getAttribute("data-name");
+          const text = settingCheckbox.getAttribute("data-name");
 
           newConfig.push({name, text, value});
         })
@@ -711,6 +725,44 @@ function getCurrentAudio() {
   return audio;
 }
 
-function toggleLoop() {
-  isLoop = !isLoop;
+async function parseConfigs() {
+  const settings = await configObj.getUserSettings();
+
+  let shuffleConfig = {};
+  let loopConfig = {};
+  let lyricsAutoScrollConfig = {};
+
+  settings.forEach((setting) => {
+    if(setting.name === "shuffle") {
+      const { name, text, value } = setting;
+      shuffleConfig = { name, text, value };
+    }
+    else if(setting.name === "loop") {
+      const { name, text, value } = setting;
+      loopConfig = { name, text, value };
+    }
+    else if(setting.name === "lyricsAutoScroll") {
+      const { name, text, value } = setting;
+      lyricsAutoScrollConfig = { name, text, value };
+    }
+  })
+
+  isShuffle = shuffleConfig.value;
+  isLoop = loopConfig.value;
+  isLyricsAutoScroll = lyricsAutoScrollConfig.value;
+
+  return [shuffleConfig, loopConfig, lyricsAutoScrollConfig]
+}
+
+function getRandomNumber(max) {
+  return Math.floor(Math.random() * (max + 1));
+}
+
+function forwardOrBackSong(newTime) {
+  const currentAudio = getCurrentAudio();
+
+  if(currentAudio) {
+    currentAudio.currentTime += newTime;
+    updateProgressBar();
+  }
 }
