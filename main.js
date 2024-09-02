@@ -4,12 +4,23 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 // Global Variables
-const configPath = path.join(__dirname, "config.json");
+const userDataPath = app.getPath('userData');
+const configPath = path.join(userDataPath, "config.json");
+const initialConfig = [{"name":"shuffle","text":"Aleatório","value":false},{"name":"loop","text":"Loop","value":false},{"name":"lyricsAutoScroll","text":"Letras Auto Scroll","value":false}]
 const isDev = false;
+
+// Check if configuration file exists
+if(!fs.existsSync(configPath)) {
+  fs.writeFile(configPath, JSON.stringify(initialConfig), err => {
+    if(err) {
+      console.error(err);
+    }
+  });
+}
 
 // Get user settings from config.json file
 ipcMain.handle("load-config", () => {  
-  if(fs.existsSync(configPath)) {
+  if(fs.existsSync(configPath)) {    
     const data = fs.readFileSync(configPath, 'utf-8');
     if(data) return JSON.parse(data);
   }

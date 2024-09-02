@@ -17,6 +17,7 @@ const loader                      = document.querySelector(".loader");
 
 // Global configuration
 let currentAudioIndex = 0;
+let randomicSongsPlayed = [];
 let isPaused = false;
 let isLoop = true;
 let isShuffle = false;
@@ -755,7 +756,22 @@ async function parseConfigs() {
 }
 
 function getRandomNumber(max) {
-  return Math.floor(Math.random() * (max + 1));
+  let newIndex = Math.floor(Math.random() * (max + 1));
+
+  while(randomicSongsPlayed.some(index => index === newIndex)) {
+    newIndex++;
+
+    if(audioObj.audioFiles.length-1 === newIndex) {
+      newIndex = 0;
+    }
+
+    if(randomicSongsPlayed.length === audioObj.audioFiles.length) {
+      randomicSongsPlayed = [];
+    }
+  }
+
+  randomicSongsPlayed.push(newIndex);  
+  return newIndex;
 }
 
 function forwardOrBackSong(newTime) {
