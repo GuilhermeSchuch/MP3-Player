@@ -10,7 +10,7 @@
 
   <body>
     <div class="importSongsContainer">
-      <label for="fileInput" class="selectSongsBtn">Selecionar Músicas</label>
+      <label for="fileInput" class="selectSongsBtn" data-i18n="selectSongs">Selecionar Músicas</label>
 
       <input
         type="file"
@@ -25,10 +25,6 @@
     <ul id="audioList"></ul>
     <ul id="playlist"></ul>
 
-    <div id="currentSongPlayingContainer">
-      <p id="currentSongPlaying"></p>
-    </div>
-    
     <progress id="progressBar" value="0" max="100"></progress>
 
     <div class="controls">
@@ -83,16 +79,20 @@
       </div>
 
       <input type="range" name="volume" id="volume" max="1" min="0" step="0.01">
+
+      <div class="gainControl">
+        <label for="songGain" data-i18n="songGain">Ganho da música</label>
+        <input type="range" name="songGain" id="songGain" min="-12" max="12" step="0.5" value="0" disabled>
+        <span id="songGainValue">0 dB</span>
+      </div>
     </div>
 
     <div class="about">
-      <p>V2.7</p>
-      <p>By: Guilherme Schuch</p>
+      <p>V2.8</p>
+      <p><span data-i18n="by">By</span>: Guilherme Schuch</p>
     </div>
 
-    <span id="API_KEY"></span>
   </body>
 
   <script src="./js/renderer.js"></script>
-  <script src="./js/config.js"></script>
 </html>

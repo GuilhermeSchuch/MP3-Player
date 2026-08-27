@@ -5,13 +5,12 @@ const togglePauseBtn              = document.querySelector("#togglePauseBtn");
 const prevSongBtn                 = document.querySelector("#prevSongBtn");
 const nextSongBtn                 = document.querySelector("#nextSongBtn");
 const backwardBtn                 = document.querySelector("#backwardBtn");
-const currentSongPlaying          = document.querySelector("#currentSongPlaying");
-const currentSongPlayingContainer = document.querySelector("#currentSongPlayingContainer");
 const toggleSettingsbtn           = document.querySelector("#toggleSettingsbtn");
 const playlist                    = document.querySelector("#playlist");
 const volume                      = document.querySelector("#volume");
+const songGain                    = document.querySelector("#songGain");
+const songGainValue               = document.querySelector("#songGainValue");
 const progressBar                 = document.querySelector("#progressBar");
-const html                        = document.querySelector("html");
 const fileInput                   = document.querySelector("#fileInput");
 const loader                      = document.querySelector(".loader");
 
@@ -19,21 +18,159 @@ const loader                      = document.querySelector(".loader");
 let currentAudioIndex = 0;
 let randomicSongsPlayed = [];
 let isPaused = false;
-let isLoop = true;
 let isShuffle = false;
-let isLyricsAutoScroll = false;
-let lyric = '';
+let currentLanguage = "pt";
+
+const translations = {
+  en: {
+    selectSongs: "Select Songs",
+    by: "By",
+    settings: "Settings",
+    language: "Language",
+    english: "English",
+    portuguese: "Portuguese",
+    shuffle: "Shuffle",
+    songGain: "Song Gain",
+    songGains: "Song gains",
+  },
+  pt: {
+    selectSongs: "Selecionar Músicas",
+    by: "Por",
+    settings: "Configurações",
+    language: "Idioma",
+    english: "Inglês",
+    portuguese: "Português",
+    shuffle: "Aleatório",
+    songGain: "Ganho da música",
+    songGains: "Ganhos por música",
+  },
+};
+
+const defaultSettings = [
+  { name: "shuffle", value: false },
+  { name: "language", value: "pt" },
+];
+
+function translate(key) {
+  return translations[currentLanguage][key] || translations.pt[key] || key;
+}
+
+function getSettingLabel(name) {
+  return translate(name);
+}
+
+function getLanguage(settings) {
+  const languageSetting = Array.isArray(settings)
+    ? settings.find((setting) => setting.name === "language")
+    : null;
+
+  return languageSetting?.value === "en" ? "en" : "pt";
+}
+
+function normalizeSettings(settings) {
+  const sourceSettings = Array.isArray(settings) ? settings : [];
+
+  return defaultSettings.map((defaultSetting) => {
+    const savedSetting = sourceSettings.find((setting) => setting.name === defaultSetting.name);
+    const value = savedSetting?.value === undefined
+      ? defaultSetting.value
+      : savedSetting.value;
+
+    return {
+      name: defaultSetting.name,
+      text: getSettingLabel(defaultSetting.name),
+      value: defaultSetting.name === "language"
+        ? (value === "en" ? "en" : "pt")
+        : Boolean(value),
+    };
+  });
+}
+
+function getSongGains(settings) {
+  const songGainsSetting = Array.isArray(settings)
+    ? settings.find((setting) => setting.name === "songGains")
+    : null;
+
+  if (!songGainsSetting?.value || typeof songGainsSetting.value !== "object") {
+    return {};
+  }
+
+  return { ...songGainsSetting.value };
+}
+
+function buildPersistedSettings(settings, songGains) {
+  return [
+    ...settings,
+    { name: "songGains", text: translate("songGains"), value: { ...songGains } },
+  ];
+}
+
+function getSongGain(songName) {
+  const gain = Number(audioObj.songGains[songName]);
+  return Number.isFinite(gain) ? Math.max(-12, Math.min(12, gain)) : 0;
+}
+
+function dbToLinear(db) {
+  return Math.pow(10, db / 20);
+}
+
+function formatSongGain(db) {
+  const numericGain = Number(db);
+  return `${numericGain > 0 ? "+" : ""}${numericGain} dB`;
+}
+
+function syncSongGainControl() {
+  const currentSong = audioObj.audioFiles[currentAudioIndex];
+  const hasSong = Boolean(currentSong);
+  const gain = hasSong ? getSongGain(currentSong.name) : 0;
+
+  songGain.disabled = !hasSong;
+  songGain.value = gain;
+  songGainValue.textContent = formatSongGain(gain);
+
+  if (audioObj.gainNode) {
+    audioObj.gainNode.gain.value = dbToLinear(gain);
+  }
+}
+
+async function refreshSongGains() {
+  const settings = await configObj.getUserSettings();
+  audioObj.songGains = getSongGains(settings);
+  syncSongGainControl();
+}
+
+async function saveSongGain(songName, gain) {
+  const savedSettings = await configObj.getUserSettings();
+  const songGains = getSongGains(savedSettings);
+  songGains[songName] = gain;
+  audioObj.songGains = songGains;
+
+  const settings = normalizeSettings(savedSettings);
+  settings.forEach((setting) => {
+    setting.text = getSettingLabel(setting.name);
+  });
+
+  await configObj.saveUserSettings(buildPersistedSettings(settings, songGains));
+}
+
+function applyLanguage(language) {
+  currentLanguage = language === "en" ? "en" : "pt";
+  document.documentElement.lang = currentLanguage;
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = translate(element.dataset.i18n);
+  });
+
+}
 
 const audioObj = {
   audioElements: [],
   audioFiles: [],
   volume: .5,
-}
-
-const lyricObj = {
-  isLyricShown: false,
-  lyricScroll: null,
-  lyricAutoScroll: false
+  audioContext: null,
+  mediaSource: null,
+  gainNode: null,
+  songGains: {},
 }
 
 const configObj = {
@@ -46,90 +183,124 @@ const configObj = {
   saveUserSettings: async (newConfig) => {
     await window.electronAPI.saveConfig(newConfig);
   },
-  settings: {
-    element: "div",
-    classList: ["checkContainer"],
-    children: [
-      {element: "p", textContent: true},
-      {element: "div", classList: ["check"], children: [
-        {element: "input", attributes: [
-          {name: "id", value: "FILL"},
-          {name: "type", value: "checkbox"},
-          {name: "name", value: "FILL"},          
-          {name: "data-name", value: "DATA-NAME"}
-        ]},
-        {element: "label", attributes: [{name: "for", value: "FILL"}]},
-      ]},
-    ]
-  },
   createElement: async () => {
     if (!configObj.settingsElement) {
-      const settingsContainer = document.createElement("div");
-      settingsContainer.classList.add("settingsContainer");
-
-      const settingsHeader = document.createElement("div");
-      settingsHeader.classList.add("settingsHeader");
-
-      const title = document.createElement("h3");
-      title.innerHTML = "Configurações";
-      settingsHeader.appendChild(title);
-
-      const settingsContent = document.createElement("div");
-      settingsContent.classList.add("settingsContent");
-
       const userSettings = await configObj.getUserSettings();
-      const settings = configObj.settings;
-
-      userSettings.forEach((userSetting) => {
-        const checkContainer = document.createElement(settings.element);
-        settings.classList.forEach((item) => checkContainer.classList.add(item));
-
-        settings.children.forEach((child) => {
-          const element = document.createElement(child.element);
-
-          if(child.textContent) element.textContent = userSetting.text;
-
-          if(child.classList) {
-            child.classList.forEach((item) => element.classList.add(item))
-          }
-
-          if(child.children) {
-            child.children.forEach((item) => {
-              const elementChild = document.createElement(item.element);
-
-              item.attributes.forEach((attr) => {
-                let attrVlue = attr.value;
-                if (attrVlue === "FILL") attrVlue = userSetting.name;
-                if (attrVlue === "DATA-NAME") attrVlue = userSetting.text;
-
-                if(userSetting.value) {
-                  elementChild.setAttribute("checked", true);
-                }
-                else {
-                  elementChild.removeAttribute("checked");
-                }
-
-                elementChild.setAttribute(attr.name, attrVlue);
-              })
-
-              element.appendChild(elementChild);
-            })
-          }
-
-          checkContainer.appendChild(element);
-        })
-        settingsContent.appendChild(checkContainer);
-      })
-
-      settingsContainer.appendChild(settingsHeader);
-      settingsContainer.appendChild(settingsContent);
-
-      configObj.settingsElement = settingsContainer;
+      configObj.settingsElement = buildSettingsElement(userSettings);
     }
 
     return configObj.settingsElement;
   }
 };
+
+function buildSettingsElement(userSettings) {
+  const settingsContainer = document.createElement("div");
+  settingsContainer.classList.add("settingsContainer");
+
+  const settingsHeader = document.createElement("div");
+  settingsHeader.classList.add("settingsHeader");
+
+  const title = document.createElement("h3");
+  title.textContent = translate("settings");
+  settingsHeader.appendChild(title);
+
+  const settingsContent = document.createElement("div");
+  settingsContent.classList.add("settingsContent");
+
+  normalizeSettings(userSettings).forEach((userSetting) => {
+    const settingContainer = document.createElement("div");
+    settingContainer.classList.add("checkContainer");
+
+    const labelText = document.createElement("p");
+    labelText.textContent = getSettingLabel(userSetting.name);
+    settingContainer.appendChild(labelText);
+
+    if (userSetting.name === "language") {
+      const selectContainer = document.createElement("div");
+      selectContainer.classList.add("languageSelect");
+
+      const languageSelect = document.createElement("select");
+      languageSelect.id = "languageSelect";
+      languageSelect.name = "language";
+      languageSelect.dataset.settingName = "language";
+
+      [
+        { value: "en", label: translate("english") },
+        { value: "pt", label: translate("portuguese") },
+      ].forEach((optionData) => {
+        const option = document.createElement("option");
+        option.value = optionData.value;
+        option.textContent = optionData.label;
+        languageSelect.appendChild(option);
+      });
+
+      languageSelect.value = userSetting.value;
+      selectContainer.appendChild(languageSelect);
+      settingContainer.appendChild(selectContainer);
+    }
+    else {
+      const check = document.createElement("div");
+      check.classList.add("check");
+
+      const checkbox = document.createElement("input");
+      checkbox.id = userSetting.name;
+      checkbox.type = "checkbox";
+      checkbox.name = userSetting.name;
+      checkbox.dataset.settingName = userSetting.name;
+      checkbox.checked = userSetting.value;
+
+      const label = document.createElement("label");
+      label.htmlFor = userSetting.name;
+
+      check.appendChild(checkbox);
+      check.appendChild(label);
+      settingContainer.appendChild(check);
+    }
+
+    settingsContent.appendChild(settingContainer);
+  });
+
+  settingsContainer.appendChild(settingsHeader);
+  settingsContainer.appendChild(settingsContent);
+  settingsContainer.addEventListener("change", handleSettingChange);
+
+  return settingsContainer;
+}
+
+async function handleSettingChange(event) {
+  const settingElement = event.target.closest("[data-setting-name]");
+  if (!settingElement) return;
+
+  const settings = normalizeSettings(await configObj.getUserSettings());
+
+  if (settingElement.dataset.settingName === "language") {
+    const language = settingElement.value === "en" ? "en" : "pt";
+    const languageSetting = settings.find((setting) => setting.name === "language");
+    languageSetting.value = language;
+    currentLanguage = language;
+  }
+  else {
+    const setting = settings.find((item) => item.name === settingElement.name);
+    if (setting) setting.value = settingElement.checked;
+  }
+
+  settings.forEach((setting) => {
+    setting.text = getSettingLabel(setting.name);
+  });
+
+  await configObj.saveUserSettings(
+    buildPersistedSettings(settings, getSongGains(await configObj.getUserSettings()))
+  );
+  await parseConfigs();
+  applyLanguage(currentLanguage);
+
+  if (configObj.settingsElement) {
+    const oldSettingsElement = configObj.settingsElement;
+    const newSettingsElement = buildSettingsElement(settings);
+    oldSettingsElement.replaceWith(newSettingsElement);
+    configObj.settingsElement = newSettingsElement;
+  }
+}
 
 // Listeners
 document.addEventListener("keydown", (e) => {
@@ -156,10 +327,6 @@ document.addEventListener("keydown", (e) => {
         restartCurrentSong();
         break;
 
-      case 76:
-        toggleLyric();
-        break;
-
       case 77:
         handleVolume(77);
         break;
@@ -170,10 +337,6 @@ document.addEventListener("keydown", (e) => {
 
       case 68:
         handleVolume(68);
-        break;
-
-      case 65:
-        toggleLyricAutoScroll();
         break;
 
       case 70:
@@ -197,10 +360,6 @@ fileInput.addEventListener('change', async (e) => {
   playSongsBtn.style.display = "flex";
   togglePauseBtn.style.display = "none";
 
-  lyric = document.createElement('li');
-  lyric.classList = "lyric";
-  playlist.append(lyric);
-
   document.querySelectorAll("button").forEach((button) => {
     button.disabled = false;
   });
@@ -216,6 +375,22 @@ volume.addEventListener("input", (e) => {
   if(currentAudio) currentAudio.volume = volume;
   audioObj.volume = volume;
 })
+
+songGain.addEventListener("input", (e) => {
+  const gain = Number(e.target.value);
+  songGainValue.textContent = formatSongGain(gain);
+
+  if (audioObj.gainNode) {
+    audioObj.gainNode.gain.value = dbToLinear(gain);
+  }
+});
+
+songGain.addEventListener("change", async (e) => {
+  const currentSong = audioObj.audioFiles[currentAudioIndex];
+  if (!currentSong) return;
+
+  await saveSongGain(currentSong.name, Number(e.target.value));
+});
 
 playSongsBtn.addEventListener("click", (e) => {
   playCurrentSong();
@@ -290,6 +465,8 @@ function playIncomingSong() {
 }
 
 async function playCurrentSong() {
+  await refreshSongGains();
+
   if(isShuffle) {
     currentAudioIndex = getRandomNumber(audioObj.audioFiles.length - 1);
     scrollToSong({ atIndex: true });
@@ -300,22 +477,12 @@ async function playCurrentSong() {
   if(currentAudio) {
     currentAudio.currentTime = 0;
     currentAudio.volume = audioObj.volume;
+    audioObj.audioContext?.resume();
+    syncSongGainControl();
     progressBar.value = 0;
     isPaused = false;
 
     currentAudio.play();
-
-    if(lyricObj.isLyricShown) {
-      playlist.scrollTo(0, 0);
-      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;      
-
-      if(currentSongPlaying.textContent.length > 48) {
-        currentSongPlaying.classList.add("scroll");
-      }
-      else {
-        currentSongPlaying.classList.remove("scroll");
-      }
-    }
 
     document.querySelectorAll("li").forEach((song) => {
       song.classList.remove("songPlaying");
@@ -329,17 +496,7 @@ async function playCurrentSong() {
     currentAudio.removeEventListener('timeupdate', updateProgressBar);
     currentAudio.addEventListener('timeupdate', updateProgressBar);
     currentAudio.addEventListener('ended', () => {
-      if(currentAudioIndex === audioObj.audioFiles.length - 1) {
-        if(!isLoop) {
-          
-        }
-        else{
-          playIncomingSong();
-        }
-      }
-      else {
-        playIncomingSong();
-      }
+      playIncomingSong();
     });
   }
 }
@@ -349,44 +506,6 @@ function updateProgressBar() {
   const progress = (currentAudio?.currentTime / currentAudio?.duration) * 100;
 
   if(progress) progressBar.value = progress;
-  
-  if(lyricObj.lyricAutoScroll) {
-    const lyricsContainer = document.querySelector('.lyric');
-    const verses = lyricsContainer.children;
-
-    if(verses.length > 0) {
-      Array.from(verses).forEach((verse) => {
-        verse.classList.remove("versePlayling");
-      })
-
-      if(progressBar.value < 100) {
-        const scrollBarValue = parseInt((Math.floor(progressBar.value) / 100) * verses.length);
-
-        if(scrollBarValue !== lyricObj.lyricScroll) {
-          playlist.scrollBy(0, 21);
-
-          lyricObj.lyricScroll = scrollBarValue;
-        }
-
-        verses[scrollBarValue].classList.add("versePlayling");
-      }
-    }
-  }
-}
-
-function toggleLyricAutoScroll() {
-  lyricObj.lyricAutoScroll = !lyricObj.lyricAutoScroll;
-
-  if(!lyricObj.lyricAutoScroll) {
-    const lyricsContainer = document.querySelector('.lyric');
-    const verses = lyricsContainer.children;
-    
-    Array.from(verses).forEach((verse) => {
-      verse.classList.remove("versePlayling");
-    })
-
-    playlist.scrollTo(0, 0);
-  }
 }
 
 function pauseCurrentSong() {
@@ -422,60 +541,14 @@ function togglePause() {
   }
 }
 
-function toggleLyric() {
-  const currentAudio = audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '');
-
-  if(lyricObj.isLyricShown) {
-    currentSongPlaying.innerHTML = ``;
-    currentSongPlayingContainer.style.display = "none";
-    lyricObj.isLyricShown = false;
-
-    Array.from(playlist.children).forEach((song) => {
-      song.style.display = "block";
-    })
-
-    lyric.style.display = "none";
-
-    Array.from(lyric.children).forEach((verse) => {
-      verse.remove();
-    })
-
-    scrollToSong({ atIndex: true });
-  }
-  else {
-    currentSongPlayingContainer.style.display = "block";
-    lyricObj.isLyricShown = true;
-
-    currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;      
-
-    if(currentSongPlaying.textContent.length > 48) {
-      currentSongPlaying.classList.add("scroll");
-    }
-    else {
-      currentSongPlaying.classList.remove("scroll");
-    }
-
-    Array.from(playlist.children).forEach((song) => {
-      song.style.display = "none";
-    })
-
-    lyric.style.display = "block";
-
-    fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
-    
-  }
-}
-
 async function toggleSettings() {
   const settings = await configObj.createElement();
 
   if(configObj.isSettingsShown) {
     configObj.isSettingsShown = false;
-
-    currentSongPlaying.innerHTML = ``;
-    currentSongPlayingContainer.style.display = "none";
     
     settings.remove();
+    configObj.settingsElement = null;
 
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "block";
@@ -488,40 +561,12 @@ async function toggleSettings() {
   else {
     configObj.isSettingsShown = true;
 
-    if(currentSongPlaying.innerHTML.length > 0) {
-      currentSongPlayingContainer.style.display = "block";
-      currentSongPlaying.innerHTML = `Tocando agora: <span>${audioObj.audioFiles[currentAudioIndex].name.replace(".mp3", '')}</span>`;
-
-      if(currentSongPlaying.textContent.length > 48) {
-        currentSongPlaying.classList.add("scroll");
-      }
-      else {
-        currentSongPlaying.classList.remove("scroll");
-      }
-    }
-
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "none";
     })
 
     playlist.appendChild(settings);
 
-    const settingsCheckboxs = document.querySelectorAll("input[type='checkbox']");
-    
-    settingsCheckboxs.forEach((checkbox) => {
-      checkbox.addEventListener("change", async () => {
-        const newConfig = [];
-
-        settingsCheckboxs.forEach((settingCheckbox) => {
-          const { name, checked: value } = settingCheckbox;
-          const text = settingCheckbox.getAttribute("data-name");
-
-          newConfig.push({name, text, value});
-        })
-
-        await configObj.saveUserSettings(newConfig);
-      })
-    })
   }
 }
 
@@ -548,76 +593,29 @@ function restartCurrentSong() {
   }
 }
 
-async function fetchLyric(songTitle) {
-  const artist = songTitle.split(' - ')[0];
-  const song = songTitle.split(' - ')[1].replace(".mp3", '');
-
-  const API_KEY = document.querySelector("#API_KEY").textContent;
-  const URL = "https://api.vagalume.com.br/search.php";
-
-  try {
-    const response = await fetch(`${URL}?art=${artist}&mus=${song}&apikey=${API_KEY}`);
-    const fetchedLyric = await response.json();
-
-    const songLyric = fetchedLyric?.mus[0]?.text;    
-
-    Array.from(lyric.children).forEach((verse) => {
-      verse.remove();
-    })
-  
-    if(songLyric) {
-      let songVerses = songLyric.split("\n");
-      lyric.innerHTML = '';
-  
-      songVerses.forEach((verse) => {
-        const span = document.createElement("span");
-        span.style.display = "block";
-        span.innerHTML = verse;
-  
-        lyric.appendChild(span);
-      })
-    }
-    else {
-      lyric.innerHTML = "Letras não encontradas";
-    }
-
-    Array.from(lyric.children).forEach((verse) => {
-      if(verse.textContent === '') verse.remove();
-    })
-    
-  } catch (error) {
-    lyric.innerHTML = "Letras não encontradas";
-  }
-}
-
 function scrollToSong({ type = null, atIndex = false }) {
-  if(!lyricObj.isLyricShown) {
-    if(atIndex) {
-      playlist.scrollTo(0, 0);
-      playlist.scrollBy(0, currentAudioIndex * 21);
-    }
-    else {
-      if(type === "previous") {
-        if(audioObj.audioFiles.length === currentAudioIndex + 1) {
-          playlist.scrollBy(0, currentAudioIndex * 21);
-        }
-        else {
-          playlist.scrollBy(0, -21);
-        }
-      }
-
-      if(type === "incoming") {
-        if(currentAudioIndex === 0) {
-          playlist.scrollTo(0, 0);
-        }
-        else {
-          playlist.scrollBy(0, 21);
-        }
-      }
-    }
+  if(atIndex) {
+    playlist.scrollTo(0, 0);
+    playlist.scrollBy(0, currentAudioIndex * 21);
   }
   else {
-    fetchLyric(audioObj.audioFiles[currentAudioIndex].name);
+    if(type === "previous") {
+      if(audioObj.audioFiles.length === currentAudioIndex + 1) {
+        playlist.scrollBy(0, currentAudioIndex * 21);
+      }
+      else {
+        playlist.scrollBy(0, -21);
+      }
+    }
+
+    if(type === "incoming") {
+      if(currentAudioIndex === 0) {
+        playlist.scrollTo(0, 0);
+      }
+      else {
+        playlist.scrollBy(0, 21);
+      }
+    }
   }
 };
 
@@ -661,6 +659,8 @@ function loadSongs (files) {
   audioObj.audioElements = [];
   audioObj.audioFiles = [];
   audioObj.volume = volume.value;
+  currentAudioIndex = 0;
+  randomicSongsPlayed = [];
 
   Array.from(playlist.children).forEach((li) => {
     if(!Array.from(li.classList).includes("loader")) {
@@ -687,6 +687,8 @@ function loadSongs (files) {
     });
   })
 
+  refreshSongGains();
+
 }
 
 function mountSongElement(file) {
@@ -703,6 +705,16 @@ function mountSongElement(file) {
     source.src = URL.createObjectURL(file);
     audio.appendChild(source);
 
+    if (!audioObj.audioContext) {
+      audioObj.audioContext = new AudioContext();
+    }
+
+    audioObj.mediaSource = audioObj.audioContext.createMediaElementSource(audio);
+    audioObj.gainNode = audioObj.audioContext.createGain();
+    audioObj.gainNode.gain.value = dbToLinear(getSongGain(file.name));
+    audioObj.mediaSource.connect(audioObj.gainNode);
+    audioObj.gainNode.connect(audioObj.audioContext.destination);
+
     audioObj.audioElements.push(audio);
 
     const listItem = document.createElement('li');
@@ -714,7 +726,11 @@ function mountSongElement(file) {
 }
 
 function dismountSongsElement() {
+  audioObj.mediaSource?.disconnect();
+  audioObj.gainNode?.disconnect();
   audioObj.audioElements = [];
+  audioObj.mediaSource = null;
+  audioObj.gainNode = null;
 
   Array.from(audioList.children).forEach((li) => {
     li.remove();
@@ -727,49 +743,30 @@ function getCurrentAudio() {
 }
 
 async function parseConfigs() {
-  const settings = await configObj.getUserSettings();
+  const settings = normalizeSettings(await configObj.getUserSettings());
 
-  let shuffleConfig = {};
-  let loopConfig = {};
-  let lyricsAutoScrollConfig = {};
-
-  settings.forEach((setting) => {
-    if(setting.name === "shuffle") {
-      const { name, text, value } = setting;
-      shuffleConfig = { name, text, value };
-    }
-    else if(setting.name === "loop") {
-      const { name, text, value } = setting;
-      loopConfig = { name, text, value };
-    }
-    else if(setting.name === "lyricsAutoScroll") {
-      const { name, text, value } = setting;
-      lyricsAutoScrollConfig = { name, text, value };
-    }
-  })
+  const shuffleConfig = settings.find((setting) => setting.name === "shuffle");
 
   isShuffle = shuffleConfig.value;
-  isLoop = loopConfig.value;
-  isLyricsAutoScroll = lyricsAutoScrollConfig.value;
 
-  return [shuffleConfig, loopConfig, lyricsAutoScrollConfig]
+  return [shuffleConfig]
 }
 
 function getRandomNumber(max) {
-  let newIndex = Math.floor(Math.random() * (max + 1));
+  let availableIndexes = [];
 
-  while(randomicSongsPlayed.some(index => index === newIndex)) {
-    newIndex++;
-
-    if(audioObj.audioFiles.length-1 === newIndex) {
-      newIndex = 0;
-    }
-
-    if(randomicSongsPlayed.length === audioObj.audioFiles.length) {
-      randomicSongsPlayed = [];
+  for(let index = 0; index <= max; index++) {
+    if(!randomicSongsPlayed.includes(index)) {
+      availableIndexes.push(index);
     }
   }
 
+  if(availableIndexes.length === 0) {
+    randomicSongsPlayed = [];
+    availableIndexes = Array.from({ length: max + 1 }, (_, index) => index);
+  }
+
+  const newIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
   randomicSongsPlayed.push(newIndex);  
   return newIndex;
 }
@@ -782,3 +779,22 @@ function forwardOrBackSong(newTime) {
     updateProgressBar();
   }
 }
+
+async function initializeApp() {
+  const settings = await configObj.getUserSettings();
+  applyLanguage(getLanguage(settings));
+
+  if (Array.isArray(settings) && settings.some((setting) => ["lyricsAutoScroll", "loop"].includes(setting.name))) {
+    const cleanedSettings = normalizeSettings(settings);
+    cleanedSettings.forEach((setting) => {
+      setting.text = getSettingLabel(setting.name);
+    });
+    await configObj.saveUserSettings(
+      buildPersistedSettings(cleanedSettings, getSongGains(settings))
+    );
+  }
+
+  await parseConfigs();
+}
+
+initializeApp();

@@ -56,12 +56,15 @@ body {
   background-color: #222831;
   padding: 10px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .importSongsContainer {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .settingsContainer {  
@@ -102,21 +105,17 @@ body {
 #playlist {
   border: 1px solid #31363F;
   overflow-y: scroll;
-  height: 500px;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   margin: 5px 0;
   padding: 3px;
   border-radius: 3px;
   color: #EEEEEE;
 }
 
-#currentSongPlaying {
-  text-align: center;
-  color: #EEEEEE;
-  margin-bottom: 5px;
-}
-
-#currentSongPlaying span {
-  color: #76ABAE;
+#progressBar {
+  flex-shrink: 0;
 }
 
 .controls {
@@ -126,7 +125,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 70px;
+  flex: 0 0 95px;
+  height: 95px;
 }
 
 .buttons {
@@ -155,11 +155,42 @@ body {
   width: 100%;
 }
 
+.gainControl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 310px) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  color: #EEEEEE;
+  font-size: 12px;
+}
+
+.gainControl label {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.gainControl input {
+  width: 100%;
+  accent-color: #76ABAE;
+  cursor: pointer;
+}
+
+.gainControl input:disabled {
+  cursor: default;
+}
+
+#songGainValue {
+  text-align: left;
+  white-space: nowrap;
+}
+
 .about {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #EEEEEE;
+  flex-shrink: 0;
 }
 
 .song {
@@ -169,11 +200,6 @@ body {
 
 .song:hover {
   opacity: .7;
-}
-
-.lyric {
-  text-align: center;
-  display: none;
 }
 
 .checkContainer {  
@@ -189,6 +215,22 @@ body {
 
 .checkContainer p {
   margin-right: 10px
+}
+
+.languageSelect select {
+  color: #EEEEEE;
+  background-color: #222831;
+  border: 1px solid #76ABAE;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 14px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.languageSelect option {
+  background-color: #222831;
+  color: #EEEEEE;
 }
 
 .check {

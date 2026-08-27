@@ -23,9 +23,6 @@ A simple mp3 player project.
 
 A software made with Electron which have one simple objective, play mp3 files ;)
 
-This software has a lyrics screen that highlights the current verse being sung (not very accurate i would say, there is no API being used for this)
-
-
 ## Demo
 
 <img  src="/src/assets/demo.png"  width="300" />
@@ -36,7 +33,6 @@ This software has a lyrics screen that highlights the current verse being sung (
 ## Features
 
 - Play mp3 files.
-- See Lyrics from current song playing.
 
   
 ## Shortcuts
@@ -52,7 +48,6 @@ This software has a lyrics screen that highlights the current verse being sung (
 |CommandOrControl+num3           |`Volume up`
 |CommandOrControl+num2           |`Toggle mute`
 |CommandOrControl+num1           |`Volume down`
-|CommandOrControl+num0           |`Toggle lyrics`
 
 
 ## Contact

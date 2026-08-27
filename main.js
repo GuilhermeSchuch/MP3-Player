@@ -6,7 +6,7 @@ const path = require("node:path");
 // Global Variables
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, "config.json");
-const initialConfig = [{"name":"shuffle","text":"Aleatório","value":false},{"name":"loop","text":"Loop","value":false},{"name":"lyricsAutoScroll","text":"Letras Auto Scroll","value":false}]
+const initialConfig = [{"name":"shuffle","text":"Aleatório","value":false},{"name":"language","text":"Idioma","value":"pt"},{"name":"songGains","text":"Ganhos por música","value":{}}]
 const isDev = false;
 
 // Check if configuration file exists
@@ -89,11 +89,6 @@ const createWindow = async () => {
   // Vomule down
   globalShortcut.register('CommandOrControl+num1', () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'd'});
-  });
-
-  // Toggle Lyric
-  globalShortcut.register('CommandOrControl+num0', () => {
-    win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'l'});
   });
 
   win.loadFile(path.join(__dirname, "src/index.html"));
