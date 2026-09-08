@@ -119,6 +119,16 @@ function formatSongGain(db) {
   return `${numericGain > 0 ? "+" : ""}${numericGain} dB`;
 }
 
+function setMediaSessionIdentity() {
+  if ("mediaSession" in navigator && "MediaMetadata" in window) {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: "MP3 Player",
+      artist: "MP3 Player",
+      album: "MP3 Player",
+    });
+  }
+}
+
 function syncSongGainControl() {
   const currentSong = audioObj.audioFiles[currentAudioIndex];
   const hasSong = Boolean(currentSong);
@@ -478,6 +488,7 @@ async function playCurrentSong() {
     currentAudio.currentTime = 0;
     currentAudio.volume = audioObj.volume;
     audioObj.audioContext?.resume();
+    setMediaSessionIdentity();
     syncSongGainControl();
     progressBar.value = 0;
     isPaused = false;

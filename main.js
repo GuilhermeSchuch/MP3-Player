@@ -3,6 +3,10 @@ const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const fs = require("node:fs");
 const path = require("node:path");
 
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.guilherme-schuch.mp3player');
+}
+
 // Global Variables
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, "config.json");

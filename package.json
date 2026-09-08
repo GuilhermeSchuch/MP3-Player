@@ -1,5 +1,6 @@
 {
   "name": "mp3-player",
+  "productName": "MP3 Player",
   "version": "1.0.0",
   "description": "MP3 Player",
   "main": "main.js",
