@@ -39,3 +39,13 @@ test("replacing and deleting a missing song only affect the requested record", (
   document = model.removeSong(document, "p1", "s1");
   assert.deepEqual(document.playlists[0].songs.map((song) => song.id), ["s2"]);
 });
+
+test("playback candidates exclude missing songs without deleting their records", () => {
+  const songs = [
+    { id: "s1", name: "Missing.mp3", path: "C:\\missing.mp3", exists: false },
+    { id: "s2", name: "Valid.mp3", path: "C:\\valid.mp3", exists: true },
+  ];
+
+  assert.deepEqual(model.getPlayableSongs(songs).map((song) => song.id), ["s2"]);
+  assert.equal(songs.length, 2);
+});

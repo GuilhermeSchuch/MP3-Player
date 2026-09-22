@@ -23,6 +23,18 @@
       >
     </div>
 
+    <div class="playlistToolbar">
+      <select id="playlistSelect" aria-label="Playlist" disabled>
+        <option data-i18n="noPlaylists">No playlists</option>
+      </select>
+
+      <div class="playlistActions">
+        <button id="newPlaylistBtn" class="playlistActionBtn" data-i18n="newPlaylist">New</button>
+        <button id="renamePlaylistBtn" class="playlistActionBtn" data-i18n="renamePlaylist" disabled>Rename</button>
+        <button id="deletePlaylistBtn" class="playlistActionBtn" data-i18n="deletePlaylist" disabled>Delete</button>
+      </div>
+    </div>
+
     <ul id="audioList"></ul>
     <ul id="playlist"></ul>
 
@@ -95,5 +107,6 @@
 
   </body>
 
+  <script src="./js/playlist-model.js"></script>
   <script src="./js/renderer.js"></script>
 </html>

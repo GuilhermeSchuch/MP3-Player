@@ -95,6 +95,51 @@ body {
   color: #76ABAE;
 }
 
+.playlistToolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 2px 0 5px;
+}
+
+#playlistSelect {
+  flex: 1;
+  min-width: 0;
+  color: #EEEEEE;
+  background-color: #31363F;
+  border: 1px solid #76ABAE;
+  border-radius: 4px;
+  padding: 5px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.playlistActions {
+  display: flex;
+  gap: 3px;
+}
+
+.playlistActionBtn {
+  color: #EEEEEE;
+  background-color: #31363F;
+  border: 1px solid #76ABAE;
+  border-radius: 4px;
+  padding: 5px 7px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.playlistActionBtn:hover:not(:disabled) {
+  color: #76ABAE;
+}
+
+.playlistActionBtn:disabled,
+#playlistSelect:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
 #audioList {
   position: absolute;
   top: -999px;
@@ -200,6 +245,39 @@ body {
 
 .song:hover {
   opacity: .7;
+}
+
+.missingSong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #9B9B9B;
+}
+
+.missingSongName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.missingSongStatus {
+  color: #D99694;
+  font-size: 11px;
+}
+
+.missingSong button {
+  color: #EEEEEE;
+  background-color: #31363F;
+  border: 1px solid #60888A;
+  border-radius: 3px;
+  padding: 2px 5px;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.missingSong button:hover {
+  color: #76ABAE;
 }
 
 .checkContainer {  

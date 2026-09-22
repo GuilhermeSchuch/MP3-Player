@@ -181,11 +181,18 @@
     return document.playlists.find((playlist) => playlist.id === document.activePlaylistId) || null;
   }
 
+  function getPlayableSongs(songs) {
+    return Array.isArray(songs)
+      ? songs.filter((song) => song.exists === true)
+      : [];
+  }
+
   return {
     addSongs,
     createEmptyDocument,
     createPlaylist,
     getActivePlaylist,
+    getPlayableSongs,
     normalizeDocument,
     normalizePath,
     removePlaylist,
