@@ -7,7 +7,7 @@
   "icon": "favicon.ico",
   "scripts": {
     "start": "electron-forge start",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "electron": "nodemon --exec electron . --disable-http-cache"
