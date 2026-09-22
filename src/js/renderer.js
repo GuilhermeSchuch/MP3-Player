@@ -209,6 +209,7 @@ function applyLanguage(language) {
 const audioObj = {
   audioElements: [],
   audioFiles: [],
+  indexBySongId: {},
   volume: .5,
   audioContext: null,
   mediaSource: null,
@@ -325,11 +326,36 @@ function renderPlaylistRows(songRecords) {
   });
 }
 
+function setPlaybackControlsEnabled(enabled) {
+  [playSongsBtn, togglePauseBtn, prevSongBtn, nextSongBtn, backwardBtn]
+    .forEach((button) => { button.disabled = !enabled; });
+}
+
+function getSongRow(songId) {
+  return Array.from(playlist.children).find((row) => row.dataset.songId === songId) || null;
+}
+
+function scrollToCurrentSong() {
+  const currentSong = audioObj.audioFiles[currentAudioIndex];
+  const row = currentSong ? getSongRow(currentSong.id) : null;
+  row?.scrollIntoView({ block: "nearest" });
+}
+
 async function loadActivePlaylist() {
+  pauseCurrentSong();
+  dismountSongsElement();
+  audioObj.audioFiles = [];
+  audioObj.indexBySongId = {};
+  currentAudioIndex = 0;
+  randomicSongsPlayed = [];
+  progressBar.value = 0;
+
   const activePlaylist = getActivePlaylistRecord();
   if (!activePlaylist) {
     activePlaylistSongs = [];
     renderPlaylistRows(activePlaylistSongs);
+    setPlaybackControlsEnabled(false);
+    syncSongGainControl();
     return;
   }
 
@@ -338,7 +364,12 @@ async function loadActivePlaylist() {
     ...song,
     file: importedFilesByPath.get(playlistModel.normalizePath(song.path)) || null,
   }));
+  const playbackQueue = playlistModel.buildPlaybackQueue(activePlaylistSongs);
+  audioObj.audioFiles = playbackQueue.songs;
+  audioObj.indexBySongId = playbackQueue.indexBySongId;
   renderPlaylistRows(activePlaylistSongs);
+  setPlaybackControlsEnabled(audioObj.audioFiles.length > 0);
+  syncSongGainControl();
 }
 
 async function loadPlaylistDocument() {
@@ -655,8 +686,8 @@ playlist.addEventListener("click", (event) => {
 
   const songRow = event.target.closest("li[data-song-id][data-playable='true']");
   if (!songRow) return;
-  const rowIndex = activePlaylistSongs.findIndex((song) => song.id === songRow.dataset.songId);
-  if (rowIndex >= 0) playSongAtIndex(rowIndex);
+  const queueIndex = audioObj.indexBySongId[songRow.dataset.songId];
+  if (Number.isInteger(queueIndex)) playSongAtIndex(queueIndex);
 });
 
 volume.addEventListener("input", (e) => {
@@ -721,6 +752,7 @@ progressBar.addEventListener('click', (e) => {
 });
 
 function playPreviousSong() {
+  if (audioObj.audioFiles.length === 0) return;
   pauseCurrentSong();
 
   currentAudioIndex--; 
@@ -733,11 +765,12 @@ function playPreviousSong() {
   togglePauseBtn.style.display = "flex";
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
 
-  scrollToSong({ type: "previous" });
-  playCurrentSong();
+  scrollToCurrentSong();
+  playCurrentSong({ chooseShuffle: false });
 }
 
 function playIncomingSong() {
+  if (audioObj.audioFiles.length === 0) return;
   pauseCurrentSong();
   
   if(currentAudioIndex === audioObj.audioFiles.length - 1) {
@@ -751,19 +784,20 @@ function playIncomingSong() {
   togglePauseBtn.style.display = "flex";
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
-  scrollToSong({ type: "incoming" });
-  playCurrentSong();
+  scrollToCurrentSong();
+  playCurrentSong({ chooseShuffle: isShuffle });
 }
 
-async function playCurrentSong() {
+async function playCurrentSong({ chooseShuffle = isShuffle } = {}) {
   await refreshSongGains();
 
-  if(isShuffle) {
+  if(chooseShuffle && isShuffle) {
     currentAudioIndex = getRandomNumber(audioObj.audioFiles.length - 1);
-    scrollToSong({ atIndex: true });
+    scrollToCurrentSong();
   }
   
-  const currentAudio = mountSongElement(audioObj.audioFiles[currentAudioIndex]);
+  const currentSong = audioObj.audioFiles[currentAudioIndex];
+  const currentAudio = mountSongElement(currentSong);
 
   if(currentAudio) {
     currentAudio.currentTime = 0;
@@ -780,7 +814,7 @@ async function playCurrentSong() {
       song.classList.remove("songPlaying");
     })
 
-    playlist.children[currentAudioIndex].classList.toggle("songPlaying");
+    getSongRow(currentSong.id)?.classList.add("songPlaying");
     
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
@@ -863,6 +897,7 @@ async function toggleSettings() {
 }
 
 function playSongAtIndex(index) {
+  if (!audioObj.audioFiles[index]) return;
   if (currentAudioIndex === index) return;
 
   playSongsBtn.style.display = "none";
@@ -871,9 +906,12 @@ function playSongAtIndex(index) {
   
   pauseCurrentSong();
   currentAudioIndex = index;
+  if (isShuffle && !randomicSongsPlayed.includes(index)) {
+    randomicSongsPlayed.push(index);
+  }
 
-  scrollToSong({ atIndex: true });
-  playCurrentSong();
+  scrollToCurrentSong();
+  playCurrentSong({ chooseShuffle: false });
 }
 
 function restartCurrentSong() {
@@ -886,29 +924,7 @@ function restartCurrentSong() {
 }
 
 function scrollToSong({ type = null, atIndex = false }) {
-  if(atIndex) {
-    playlist.scrollTo(0, 0);
-    playlist.scrollBy(0, currentAudioIndex * 21);
-  }
-  else {
-    if(type === "previous") {
-      if(audioObj.audioFiles.length === currentAudioIndex + 1) {
-        playlist.scrollBy(0, currentAudioIndex * 21);
-      }
-      else {
-        playlist.scrollBy(0, -21);
-      }
-    }
-
-    if(type === "incoming") {
-      if(currentAudioIndex === 0) {
-        playlist.scrollTo(0, 0);
-      }
-      else {
-        playlist.scrollBy(0, 21);
-      }
-    }
-  }
+  scrollToCurrentSong();
 };
 
 function handleVolume(code) {
@@ -947,54 +963,18 @@ function handleVolume(code) {
   getCurrentAudio().volume = newVolume;
 }
 
-function loadSongs (files) {
-  audioObj.audioElements = [];
-  audioObj.audioFiles = [];
-  audioObj.volume = volume.value;
-  currentAudioIndex = 0;
-  randomicSongsPlayed = [];
-
-  Array.from(playlist.children).forEach((li) => {
-    if(!Array.from(li.classList).includes("loader")) {
-      li.remove();
-    }
-  })
-
-  audioList.innerHTML = '';
-  progressBar.value = 0;
-
-  Array.from(files).forEach((file) => {
-    audioObj.audioFiles.push(file);
-
-    const songItem = document.createElement("li");
-    songItem.textContent = file.name.replace(".mp3", '');
-    songItem.classList.add("song");
-    playlist.appendChild(songItem);
-
-    songItem.addEventListener("click", () => {
-      document.querySelectorAll("li").forEach((song) => {
-        song.classList.remove("songPlaying")
-      })
-      playSongAtIndex(Array.from(playlist.children).indexOf(songItem));
-    });
-  })
-
-  refreshSongGains();
-
-}
-
-function mountSongElement(file) {
+function mountSongElement(song) {
   if(audioObj.audioElements.length > 0) {
     dismountSongsElement();
   }
 
-  if(file.type === "audio/mp3" || file.type === "audio/mpeg") {
+  if(song?.file || song?.url) {
     const audio = document.createElement('audio');
     audio.setAttribute("data-id", currentAudioIndex)
     audio.controls = true;
 
     const source = document.createElement('source');
-    source.src = URL.createObjectURL(file);
+    source.src = song.file ? URL.createObjectURL(song.file) : song.url;
     audio.appendChild(source);
 
     if (!audioObj.audioContext) {
@@ -1003,7 +983,7 @@ function mountSongElement(file) {
 
     audioObj.mediaSource = audioObj.audioContext.createMediaElementSource(audio);
     audioObj.gainNode = audioObj.audioContext.createGain();
-    audioObj.gainNode.gain.value = dbToLinear(getSongGain(file.name));
+    audioObj.gainNode.gain.value = dbToLinear(getSongGain(song.name));
     audioObj.mediaSource.connect(audioObj.gainNode);
     audioObj.gainNode.connect(audioObj.audioContext.destination);
 
@@ -1075,16 +1055,6 @@ function forwardOrBackSong(newTime) {
 async function initializeApp() {
   const settings = await configObj.getUserSettings();
   applyLanguage(getLanguage(settings));
-
-  if (Array.isArray(settings) && settings.some((setting) => ["lyricsAutoScroll", "loop"].includes(setting.name))) {
-    const cleanedSettings = normalizeSettings(settings);
-    cleanedSettings.forEach((setting) => {
-      setting.text = getSettingLabel(setting.name);
-    });
-    await configObj.saveUserSettings(
-      buildPersistedSettings(cleanedSettings, getSongGains(settings))
-    );
-  }
 
   await parseConfigs();
   await loadPlaylistDocument();

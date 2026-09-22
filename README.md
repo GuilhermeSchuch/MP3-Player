@@ -33,6 +33,9 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 ## Features
 
 - Play mp3 files.
+- Create and persist multiple playlists.
+- Restore missing songs with a file picker or remove them from a playlist.
+- Adjust and persist per-song gain.
 
   
 ## Shortcuts
@@ -48,8 +51,3 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 |CommandOrControl+num3           |`Volume up`
 |CommandOrControl+num2           |`Toggle mute`
 |CommandOrControl+num1           |`Volume down`
-
-
-## Contact
-
-- guiguischuch@gmail.com

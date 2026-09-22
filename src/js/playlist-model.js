@@ -187,10 +187,21 @@
       : [];
   }
 
+  function buildPlaybackQueue(songs) {
+    const playableSongs = getPlayableSongs(songs);
+    return {
+      songs: playableSongs,
+      indexBySongId: Object.fromEntries(
+        playableSongs.map((song, index) => [song.id, index]),
+      ),
+    };
+  }
+
   return {
     addSongs,
     createEmptyDocument,
     createPlaylist,
+    buildPlaybackQueue,
     getActivePlaylist,
     getPlayableSongs,
     normalizeDocument,

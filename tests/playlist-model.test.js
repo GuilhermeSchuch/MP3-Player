@@ -49,3 +49,14 @@ test("playback candidates exclude missing songs without deleting their records",
   assert.deepEqual(model.getPlayableSongs(songs).map((song) => song.id), ["s2"]);
   assert.equal(songs.length, 2);
 });
+
+test("playable queue retains stable display IDs", () => {
+  const records = [
+    { id: "missing", name: "Missing.mp3", path: "C:\\missing.mp3", exists: false },
+    { id: "valid", name: "Valid.mp3", path: "C:\\valid.mp3", exists: true },
+  ];
+
+  const queue = model.buildPlaybackQueue(records);
+  assert.deepEqual(queue.songs.map((song) => song.id), ["valid"]);
+  assert.equal(queue.indexBySongId.valid, 0);
+});
