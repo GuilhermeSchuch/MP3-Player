@@ -2,6 +2,7 @@
 const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const fs = require("node:fs");
 const path = require("node:path");
+const playlistStorage = require("./src/js/playlist-storage");
 
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.guilherme-schuch.mp3player');
@@ -10,6 +11,7 @@ if (process.platform === 'win32') {
 // Global Variables
 const userDataPath = app.getPath('userData');
 const configPath = path.join(userDataPath, "config.json");
+const playlistsPath = path.join(userDataPath, "playlists.json");
 const initialConfig = [{"name":"shuffle","text":"Aleatório","value":false},{"name":"language","text":"Idioma","value":"pt"},{"name":"songGains","text":"Ganhos por música","value":{}}]
 const isDev = false;
 
@@ -34,6 +36,18 @@ ipcMain.handle("load-config", () => {
 // Save user settings into config.json file
 ipcMain.handle("save-config", (event, newConfig) => {
   fs.writeFileSync(configPath, JSON.stringify(newConfig));
+});
+
+ipcMain.handle("load-playlists", () => {
+  return playlistStorage.loadPlaylists(playlistsPath, console.error);
+});
+
+ipcMain.handle("save-playlists", (event, document) => {
+  playlistStorage.savePlaylists(playlistsPath, document);
+});
+
+ipcMain.handle("inspect-playlist-songs", (event, songs) => {
+  return playlistStorage.inspectPlaylistSongs(songs);
 });
 
 const createWindow = async () => {
