@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>MP3 Player</title>
+    <title>EchoDeck</title>
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
     <meta name="author" content="Guilherme Schuch">
 
@@ -101,8 +101,20 @@
     </div>
 
     <div class="about">
-      <p>V2.8</p>
+      <p>3.0.2</p>
       <p><span data-i18n="by">By</span>: Guilherme Schuch</p>
+    </div>
+
+    <div id="dialogOverlay" class="dialogOverlay" hidden>
+      <form id="dialogBox" class="dialogBox">
+        <h3 id="dialogTitle">EchoDeck</h3>
+        <p id="dialogMessage"></p>
+        <input id="dialogInput" class="dialogInput" type="text" autocomplete="off">
+        <div class="dialogActions">
+          <button id="dialogCancel" class="playlistActionBtn" type="button">Cancel</button>
+          <button id="dialogConfirm" class="playlistActionBtn" type="submit">OK</button>
+        </div>
+      </form>
     </div>
 
   </body>

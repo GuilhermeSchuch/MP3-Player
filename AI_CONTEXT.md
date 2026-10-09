@@ -1,10 +1,10 @@
-# AI Context: MP3 Player
+# AI Context: EchoDeck
 
 This file is the working context for AI agents modifying this repository. Treat the current source code as authoritative when it differs from older documentation or historical commits.
 
 ## Project purpose
 
-MP3 Player is a small Windows-focused Electron desktop application for playing local `.mp3` files. Its core goals are:
+EchoDeck is a small Windows-focused Electron desktop application for playing local `.mp3` files. Its core goals are:
 
 - Play a user’s local MP3 files with previous, next, pause/play, restart, seek, and volume controls.
 - Persist named playlists across application restarts without copying, moving, or deleting the user’s audio files.
@@ -12,7 +12,8 @@ MP3 Player is a small Windows-focused Electron desktop application for playing l
 - Support shuffle playback and automatic looping of the active playlist.
 - Persist per-song dB gain so songs with different loudness can be normalized individually.
 - Support English and Portuguese UI labels.
-- Expose the application as “MP3 Player” to media-session-aware Windows surfaces.
+- Expose the application as “EchoDeck” to media-session-aware Windows surfaces.
+- Publish the current song through Discord Rich Presence when Discord is running.
 
 The application is intentionally local-only. It has no cloud sync, accounts, shared playlists, metadata editor, audio library manager, or drag-and-drop playlist ordering.
 
@@ -50,6 +51,10 @@ git diff --check
 ```
 
 `out/` and `node_modules/` are ignored. Packaging writes into `out/`.
+
+## Versioning
+
+For every user-requested app change, increment the release version in both `package.json` and the root package entry in `package-lock.json`, and update the version shown in the app footer (`src/index.html`) to the same value. Use patch increments for fixes, minor increments for features, and major increments for breaking changes unless the user gives an exact version. The installer filename is generated from the package version.
 
 ## Repository map
 
@@ -241,7 +246,7 @@ Translations live in the `translations` object in `renderer.js`. Static labels u
 
 The Web Audio graph is `HTMLAudioElement -> MediaElementSource -> GainNode -> AudioContext.destination`. Gain values are dB values from `-12` to `+12` in `0.5` dB steps and are converted with `dbToLinear()` before being applied. `saveSongGain()` persists the value under the song filename.
 
-`setMediaSessionIdentity()` sets Media Session metadata to “MP3 Player” so external Windows surfaces identify the app rather than showing `index.html`.
+`setMediaSessionIdentity()` sets Media Session metadata to “EchoDeck” so external Windows surfaces identify the app rather than showing `index.html`. The renderer sends the current song, paused state, and HTML audio position to the main-process Discord IPC adapter. The activity uses Playing type (`0`) and an elapsed timestamp anchored to the track position; it refreshes on track changes, seeks, restarts, and resumes, and omits timestamps while paused because RPC has no pause control. Playlist names and local file paths are not sent. Its `large_image` key is `logo_1_1_`, matching the asset uploaded in the user's Discord Developer Portal; Discord asset keys must match exactly. The adapter reads `DISCORD_CLIENT_ID` from the root `.env` file or process environment and silently tolerates Discord not running. The repository logo is `src/assets/echodeck-logo.png`.
 
 ## Global shortcuts
 

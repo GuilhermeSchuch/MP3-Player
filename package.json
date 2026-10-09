@@ -1,15 +1,16 @@
 {
   "name": "mp3-player",
-  "productName": "MP3 Player",
-  "version": "1.0.0",
-  "description": "MP3 Player",
+  "productName": "EchoDeck",
+  "version": "3.0.2",
+  "description": "EchoDeck local music player",
   "main": "main.js",
   "icon": "favicon.ico",
   "scripts": {
     "start": "electron-forge start",
     "test": "node --test",
     "package": "electron-forge package",
-    "make": "electron-forge make",
+    "make": "electron-builder --win nsis",
+    "forge-make": "electron-forge make",
     "electron": "nodemon --exec electron . --disable-http-cache"
   },
   "author": "Guilherme Schuch",
@@ -22,10 +23,38 @@
     "@electron-forge/maker-zip": "^7.3.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.3.0",
     "@electron-forge/plugin-fuses": "^7.3.0",
+    "@electron/get": "^4.0.3",
     "electron": "^29.1.4",
+    "electron-builder": "^26.15.3",
     "nodemon": "^3.1.0"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0"
+  },
+  "build": {
+    "appId": "com.guilherme-schuch.echodeck",
+    "productName": "EchoDeck",
+    "directories": {
+      "output": "out/installer"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "favicon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "artifactName": "EchoDeck Setup-${version}.${ext}"
+    }
   }
 }

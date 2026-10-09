@@ -17,6 +17,15 @@ const songGainValue               = document.querySelector("#songGainValue");
 const progressBar                 = document.querySelector("#progressBar");
 const fileInput                   = document.querySelector("#fileInput");
 const loader                      = document.querySelector(".loader");
+const selectSongsBtn              = document.querySelector(".selectSongsBtn");
+const dialogOverlay               = document.querySelector("#dialogOverlay");
+const dialogBox                   = document.querySelector("#dialogBox");
+const dialogTitle                 = document.querySelector("#dialogTitle");
+const dialogMessage               = document.querySelector("#dialogMessage");
+const dialogInput                 = document.querySelector("#dialogInput");
+const dialogCancel                = document.querySelector("#dialogCancel");
+const dialogConfirm               = document.querySelector("#dialogConfirm");
+const APP_NAME                    = "EchoDeck";
 
 // Global configuration
 let currentAudioIndex = 0;
@@ -51,6 +60,8 @@ const translations = {
     shuffle: "Shuffle",
     songGain: "Song Gain",
     songGains: "Song gains",
+    cancel: "Cancel",
+    confirm: "OK",
   },
   pt: {
     selectSongs: "Selecionar Músicas",
@@ -74,6 +85,8 @@ const translations = {
     shuffle: "Aleatório",
     songGain: "Ganho da música",
     songGains: "Ganhos por música",
+    cancel: "Cancelar",
+    confirm: "OK",
   },
 };
 
@@ -84,6 +97,58 @@ const defaultSettings = [
 
 function translate(key) {
   return translations[currentLanguage][key] || translations.pt[key] || key;
+}
+
+function showDialog({ title = APP_NAME, message = "", mode = "message", initialValue = "" }) {
+  return new Promise((resolve) => {
+    const hasInput = mode === "text";
+    const hasCancel = mode === "text" || mode === "confirm";
+    let settled = false;
+
+    const close = (value) => {
+      if (settled) return;
+      settled = true;
+      dialogOverlay.hidden = true;
+      dialogBox.onsubmit = null;
+      dialogCancel.onclick = null;
+      resolve(value);
+    };
+
+    dialogTitle.textContent = title;
+    dialogMessage.textContent = message;
+    dialogInput.hidden = !hasInput;
+    dialogInput.value = initialValue;
+    dialogCancel.hidden = !hasCancel;
+    dialogCancel.textContent = translate("cancel");
+    dialogConfirm.textContent = translate("confirm");
+    dialogOverlay.hidden = false;
+
+    dialogBox.onsubmit = (event) => {
+      event.preventDefault();
+      close(hasInput ? dialogInput.value : true);
+    };
+    dialogCancel.onclick = () => close(hasInput ? null : false);
+
+    if (hasInput) {
+      dialogInput.focus();
+      dialogInput.select();
+    }
+    else {
+      dialogConfirm.focus();
+    }
+  });
+}
+
+function requestTextDialog(title, message, initialValue = "") {
+  return showDialog({ title, message, mode: "text", initialValue });
+}
+
+function showMessageDialog(message) {
+  return showDialog({ message, mode: "message" });
+}
+
+function showConfirmDialog(message) {
+  return showDialog({ message, mode: "confirm" });
 }
 
 function getSettingLabel(name) {
@@ -150,14 +215,41 @@ function formatSongGain(db) {
   return `${numericGain > 0 ? "+" : ""}${numericGain} dB`;
 }
 
-function setMediaSessionIdentity() {
+function getSongDisplayName(song) {
+  return String(song?.name || APP_NAME).replace(/\.mp3$/i, "") || APP_NAME;
+}
+
+function setMediaSessionIdentity(song) {
   if ("mediaSession" in navigator && "MediaMetadata" in window) {
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: "MP3 Player",
-      artist: "MP3 Player",
-      album: "MP3 Player",
+      title: getSongDisplayName(song),
+      artist: APP_NAME,
+      album: getActivePlaylistRecord()?.name || APP_NAME,
     });
   }
+}
+
+function buildDiscordActivity(song, currentAudio, paused = false) {
+  const activity = {
+    title: getSongDisplayName(song).slice(0, 128),
+    paused,
+  };
+
+  if (Number.isFinite(currentAudio?.currentTime)) {
+    activity.positionSeconds = currentAudio.currentTime;
+  }
+
+  return activity;
+}
+
+function updateDiscordPresence(song, paused = false, currentAudio = getCurrentAudio()) {
+  if (!song) {
+    return window.electronAPI.clearDiscordPresence().catch(() => {});
+  }
+
+  return window.electronAPI
+    .updateDiscordPresence(buildDiscordActivity(song, currentAudio, paused))
+    .catch(() => {});
 }
 
 function syncSongGainControl() {
@@ -342,7 +434,8 @@ function scrollToCurrentSong() {
 }
 
 async function loadActivePlaylist() {
-  pauseCurrentSong();
+  pauseCurrentSong({ updatePresence: false });
+  window.electronAPI.clearDiscordPresence().catch(() => {});
   dismountSongsElement();
   audioObj.audioFiles = [];
   audioObj.indexBySongId = {};
@@ -381,14 +474,14 @@ async function loadPlaylistDocument() {
 async function handlePlaylistImport(files) {
   const selectedFiles = Array.from(files || []).filter(isMp3File);
   if (selectedFiles.length === 0) {
-    if (files?.length > 0) window.alert(translate("invalidAudioFile"));
+    if (files?.length > 0) await showMessageDialog(translate("invalidAudioFile"));
     return;
   }
 
   if (!getActivePlaylistRecord()) {
-    const name = window.prompt(translate("playlistNamePrompt"));
+    const name = await requestTextDialog(translate("newPlaylist"), translate("playlistNamePrompt"));
     if (!name?.trim()) {
-      window.alert(translate("playlistNameRequired"));
+      await showMessageDialog(translate("playlistNameRequired"));
       return;
     }
     playlistDocument = playlistModel.createPlaylist(
@@ -415,9 +508,9 @@ async function handlePlaylistImport(files) {
 }
 
 async function createPlaylist() {
-  const name = window.prompt(translate("playlistNamePrompt"));
+  const name = await requestTextDialog(translate("newPlaylist"), translate("playlistNamePrompt"));
   if (!name?.trim()) {
-    window.alert(translate("playlistNameRequired"));
+    await showMessageDialog(translate("playlistNameRequired"));
     return;
   }
 
@@ -436,9 +529,13 @@ async function renameActivePlaylist() {
   const activePlaylist = getActivePlaylistRecord();
   if (!activePlaylist) return;
 
-  const name = window.prompt(translate("playlistNamePrompt"), activePlaylist.name);
+  const name = await requestTextDialog(
+    translate("renamePlaylist"),
+    translate("playlistNamePrompt"),
+    activePlaylist.name,
+  );
   if (!name?.trim()) {
-    window.alert(translate("playlistNameRequired"));
+    await showMessageDialog(translate("playlistNameRequired"));
     return;
   }
 
@@ -449,7 +546,7 @@ async function renameActivePlaylist() {
 
 async function deleteActivePlaylist() {
   const activePlaylist = getActivePlaylistRecord();
-  if (!activePlaylist || !window.confirm(translate("confirmDeletePlaylist"))) return;
+  if (!activePlaylist || !await showConfirmDialog(translate("confirmDeletePlaylist"))) return;
 
   playlistDocument = playlistModel.removePlaylist(playlistDocument, activePlaylist.id);
   await savePlaylistDocument();
@@ -469,7 +566,7 @@ async function locateSong(songId) {
     const file = input.files?.[0];
     if (!file) return;
     if (!isMp3File(file)) {
-      window.alert(translate("invalidAudioFile"));
+      await showMessageDialog(translate("invalidAudioFile"));
       return;
     }
 
@@ -489,7 +586,7 @@ async function locateSong(songId) {
 
 async function deleteSong(songId) {
   const activePlaylist = getActivePlaylistRecord();
-  if (!activePlaylist || !window.confirm(translate("confirmDeleteSong"))) return;
+  if (!activePlaylist || !await showConfirmDialog(translate("confirmDeleteSong"))) return;
 
   playlistDocument = playlistModel.removeSong(playlistDocument, activePlaylist.id, songId);
   await savePlaylistDocument();
@@ -656,6 +753,13 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
+selectSongsBtn.addEventListener("click", async (event) => {
+  if (playlistModel.getImportFlow(playlistDocument) !== "create-playlist-first") return;
+
+  event.preventDefault();
+  await createPlaylist();
+});
+
 fileInput.addEventListener('change', async (e) => {
   await handlePlaylistImport(e.target.files);
   fileInput.value = "";
@@ -748,6 +852,7 @@ progressBar.addEventListener('click', (e) => {
     const newTime = (clickedPercentage / 100) * currentAudio.duration;
     currentAudio.currentTime = newTime;
     updateProgressBar();
+    updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], isPaused, currentAudio);
   }
 });
 
@@ -803,12 +908,13 @@ async function playCurrentSong({ chooseShuffle = isShuffle } = {}) {
     currentAudio.currentTime = 0;
     currentAudio.volume = audioObj.volume;
     audioObj.audioContext?.resume();
-    setMediaSessionIdentity();
+    setMediaSessionIdentity(currentSong);
     syncSongGainControl();
     progressBar.value = 0;
     isPaused = false;
 
     currentAudio.play();
+    updateDiscordPresence(currentSong, false, currentAudio);
 
     document.querySelectorAll("li").forEach((song) => {
       song.classList.remove("songPlaying");
@@ -834,12 +940,15 @@ function updateProgressBar() {
   if(progress) progressBar.value = progress;
 }
 
-function pauseCurrentSong() {
+function pauseCurrentSong({ updatePresence = true } = {}) {
   const currentAudio = getCurrentAudio()
 
   if(currentAudio) {
     currentAudio.pause();
     isPaused = true;
+    if (updatePresence) {
+      updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], true);
+    }
   }
 
   playSongsBtn.style.display = "none";
@@ -853,6 +962,7 @@ function togglePause() {
     if(isPaused) {
       currentAudio.play();
       isPaused = false;
+      updateDiscordPresence(audioObj.audioFiles[currentAudioIndex]);
 
       playSongsBtn.style.display = "none";
       togglePauseBtn.style.display = "flex"
@@ -861,6 +971,7 @@ function togglePause() {
     else {
       currentAudio.pause();
       isPaused = true;
+      updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], true);
 
       togglePauseBtn.innerHTML = "<img src='./assets/play.ico' alt='PLAY' width='20'>"
     }
@@ -920,6 +1031,7 @@ function restartCurrentSong() {
   if(currentAudio) {
     currentAudio.currentTime = 0;
     updateProgressBar();
+    updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], isPaused, currentAudio);
   }
 }
 
@@ -1049,6 +1161,7 @@ function forwardOrBackSong(newTime) {
   if(currentAudio) {
     currentAudio.currentTime += newTime;
     updateProgressBar();
+    updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], isPaused, currentAudio);
   }
 }
 

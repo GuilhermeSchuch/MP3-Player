@@ -12,5 +12,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   loadPlaylists: async () => ipcRenderer.invoke("load-playlists"),
   savePlaylists: async (document) => ipcRenderer.invoke("save-playlists", document),
   inspectPlaylistSongs: async (songs) => ipcRenderer.invoke("inspect-playlist-songs", songs),
+  updateDiscordPresence: async (activity) => ipcRenderer.invoke("update-discord-presence", activity),
+  clearDiscordPresence: async () => ipcRenderer.invoke("clear-discord-presence"),
   getFilePath: (file) => webUtils.getPathForFile(file),
 });

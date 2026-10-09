@@ -3,17 +3,51 @@ const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
 const fs = require("node:fs");
 const path = require("node:path");
 const playlistStorage = require("./src/js/playlist-storage");
+const { buildActivity, createDiscordPresence } = require("./src/js/discord-presence");
+
+const appName = "EchoDeck";
+app.setName(appName);
 
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.guilherme-schuch.mp3player');
+  app.setAppUserModelId('com.guilherme-schuch.echodeck');
 }
 
 // Global Variables
-const userDataPath = app.getPath('userData');
+function loadEnvValue(name) {
+  if (process.env[name]) return process.env[name];
+
+  try {
+    const envPath = path.join(__dirname, ".env");
+    const line = fs.readFileSync(envPath, "utf8")
+      .split(/\r?\n/)
+      .find((entry) => new RegExp(`^\\s*${name}\\s*=`).test(entry));
+    const value = line?.replace(new RegExp(`^\\s*${name}\\s*=`), "").trim();
+    return value?.replace(/^(["'])(.*)\1$/, "$2") || "";
+  } catch {
+    return "";
+  }
+}
+
+const configuredUserDataPath = app.getPath('userData');
+const legacyUserDataPath = path.join(app.getPath("appData"), "MP3 Player");
+const hasLegacyData = ["config.json", "playlists.json"]
+  .some((fileName) => fs.existsSync(path.join(legacyUserDataPath, fileName)));
+const hasNewData = ["config.json", "playlists.json"]
+  .some((fileName) => fs.existsSync(path.join(configuredUserDataPath, fileName)));
+const userDataPath = hasLegacyData && !hasNewData
+  ? legacyUserDataPath
+  : configuredUserDataPath;
 const configPath = path.join(userDataPath, "config.json");
 const playlistsPath = path.join(userDataPath, "playlists.json");
 const initialConfig = [{"name":"shuffle","text":"Aleatório","value":false},{"name":"language","text":"Idioma","value":"pt"},{"name":"songGains","text":"Ganhos por música","value":{}}]
 const isDev = false;
+const discordClientId = loadEnvValue("DISCORD_CLIENT_ID");
+const discordPresence = discordClientId
+  ? createDiscordPresence({
+      clientId: discordClientId,
+      logger: (message) => console.error(message),
+    })
+  : null;
 
 // Check if configuration file exists
 if(!fs.existsSync(configPath)) {
@@ -50,11 +84,23 @@ ipcMain.handle("inspect-playlist-songs", (event, songs) => {
   return playlistStorage.inspectPlaylistSongs(songs);
 });
 
+ipcMain.handle("update-discord-presence", async (event, activity) => {
+  if (!discordPresence) return false;
+  await discordPresence.setActivity(buildActivity(activity));
+  return true;
+});
+
+ipcMain.handle("clear-discord-presence", async () => {
+  if (!discordPresence) return false;
+  await discordPresence.clearActivity();
+  return true;
+});
+
 const createWindow = async () => {
   const win = new BrowserWindow({
     width: isDev ? 1200 : 500,
     height: 700,
-    title: "MP3 Player",
+    title: appName,
     fullscreen: false,
     resizable: false,
     icon: path.join(__dirname, "src/assets/icon.ico"),
@@ -118,5 +164,7 @@ app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => {
+  discordPresence?.clearActivity();
+  discordPresence?.disconnect();
   globalShortcut.unregisterAll();
 });

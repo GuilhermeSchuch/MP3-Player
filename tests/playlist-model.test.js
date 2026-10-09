@@ -7,6 +7,14 @@ test("normalizes invalid storage to an empty document", () => {
   assert.deepEqual(model.normalizeDocument({ playlists: "bad" }), model.createEmptyDocument());
 });
 
+test("requires a playlist before opening the song picker", () => {
+  const emptyDocument = model.createEmptyDocument();
+  const documentWithPlaylist = model.createPlaylist(emptyDocument, "Favorites", "playlist-1");
+
+  assert.equal(model.getImportFlow(emptyDocument), "create-playlist-first");
+  assert.equal(model.getImportFlow(documentWithPlaylist), "open-file-picker");
+});
+
 test("adds songs once using normalized paths", () => {
   let document = model.createEmptyDocument();
   document = model.createPlaylist(document, "Workout", "p1");
