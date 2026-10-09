@@ -430,7 +430,7 @@ function getSongRow(songId) {
 function scrollToCurrentSong() {
   const currentSong = audioObj.audioFiles[currentAudioIndex];
   const row = currentSong ? getSongRow(currentSong.id) : null;
-  row?.scrollIntoView({ block: "nearest" });
+  row?.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 
 async function loadActivePlaylist() {
