@@ -437,6 +437,10 @@ async function loadActivePlaylist() {
   pauseCurrentSong({ updatePresence: false });
   window.electronAPI.clearDiscordPresence().catch(() => {});
   dismountSongsElement();
+  isPaused = false;
+  playSongsBtn.style.display = "flex";
+  togglePauseBtn.style.display = "none";
+  setPlaybackControlsEnabled(false);
   audioObj.audioFiles = [];
   audioObj.indexBySongId = {};
   currentAudioIndex = 0;
@@ -447,7 +451,6 @@ async function loadActivePlaylist() {
   if (!activePlaylist) {
     activePlaylistSongs = [];
     renderPlaylistRows(activePlaylistSongs);
-    setPlaybackControlsEnabled(false);
     syncSongGainControl();
     return;
   }
@@ -924,6 +927,7 @@ async function playCurrentSong({ chooseShuffle = isShuffle } = {}) {
     
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
+    togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>";
 
     currentAudio.removeEventListener('timeupdate', updateProgressBar);
     currentAudio.addEventListener('timeupdate', updateProgressBar);
@@ -950,9 +954,6 @@ function pauseCurrentSong({ updatePresence = true } = {}) {
       updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], true);
     }
   }
-
-  playSongsBtn.style.display = "none";
-  togglePauseBtn.style.display = "flex";
 }
 
 function togglePause() {
@@ -1009,7 +1010,7 @@ async function toggleSettings() {
 
 function playSongAtIndex(index) {
   if (!audioObj.audioFiles[index]) return;
-  if (currentAudioIndex === index) return;
+  if (currentAudioIndex === index && getCurrentAudio()) return;
 
   playSongsBtn.style.display = "none";
   togglePauseBtn.style.display = "flex";
