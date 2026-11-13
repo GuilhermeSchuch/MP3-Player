@@ -1,5 +1,5 @@
 // Imports
-const { app, BrowserWindow, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electron');
 const fs = require("node:fs");
 const path = require("node:path");
 const playlistStorage = require("./src/js/playlist-storage");
@@ -29,6 +29,7 @@ function loadEnvValue(name) {
 }
 
 const configuredUserDataPath = app.getPath('userData');
+const windowPositionPath = path.join(configuredUserDataPath, "window-position.json");
 const legacyUserDataPath = path.join(app.getPath("appData"), "MP3 Player");
 const hasLegacyData = ["config.json", "playlists.json"]
   .some((fileName) => fs.existsSync(path.join(legacyUserDataPath, fileName)));
@@ -96,10 +97,34 @@ ipcMain.handle("clear-discord-presence", async () => {
   return true;
 });
 
+function loadWindowPosition(width) {
+  let position;
+  try {
+    position = JSON.parse(fs.readFileSync(windowPositionPath, "utf8"));
+  } catch {
+    return {};
+  }
+
+  const { x, y } = position ?? {};
+  if (!Number.isSafeInteger(x) || !Number.isSafeInteger(y)) return {};
+
+  // Restore only if the middle of the title bar is on a connected display.
+  const titleBarX = x + Math.floor(width / 2);
+  const titleBarY = y + 16;
+  const visible = screen.getAllDisplays().some(({ workArea }) =>
+    titleBarX >= workArea.x && titleBarX < workArea.x + workArea.width &&
+    titleBarY >= workArea.y && titleBarY < workArea.y + workArea.height
+  );
+
+  return visible ? { x, y } : {};
+}
+
 const createWindow = async () => {
+  const width = isDev ? 1200 : 500;
   const win = new BrowserWindow({
-    width: isDev ? 1200 : 500,
+    width,
     height: 700,
+    ...loadWindowPosition(width),
     title: appName,
     fullscreen: false,
     resizable: false,
@@ -109,6 +134,16 @@ const createWindow = async () => {
       preload: path.join(__dirname, 'preload.js')
     },
   })
+
+  win.on("close", () => {
+    const { x, y } = win.getNormalBounds();
+    try {
+      fs.mkdirSync(configuredUserDataPath, { recursive: true });
+      fs.writeFileSync(windowPositionPath, JSON.stringify({ x, y }));
+    } catch (error) {
+      console.error("Unable to save window position:", error);
+    }
+  });
 
   // Play next song
   globalShortcut.register('CommandOrControl+num9', () => {
