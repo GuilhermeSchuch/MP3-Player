@@ -16,13 +16,21 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
   let currentAudio = null;
 
   function createElement(tag) {
+    const classList = new Set();
+    classList.remove = classList.delete;
+    classList.toggle = (name, enabled) => enabled ? classList.add(name) : classList.delete(name);
     return {
       children: [],
       style: {},
       dataset: {},
-      classList: new Set(),
+      classList,
       addEventListener(event, listener) { listeners.set(this, { ...listeners.get(this), [event]: listener }); },
-      removeEventListener() {},
+      removeEventListener(event) { delete listeners.get(this)?.[event]; },
+      remove() {
+        for (const parent of buttons.values()) {
+          parent.children = parent.children.filter((child) => child !== this);
+        }
+      },
       appendChild(child) { this.children.push(child); },
       append(...children) { this.children.push(...children); },
       replaceChildren() { this.children = []; },
@@ -51,7 +59,7 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
         if (!buttons.has(selector)) buttons.set(selector, createElement());
         return buttons.get(selector);
       },
-      querySelectorAll: () => [],
+      querySelectorAll: (selector) => selector === "li" ? buttons.get("#playlist").children : [],
       addEventListener(event, listener) { listeners.set(this, { [event]: listener }); },
       createElement(tag) {
         const element = createElement(tag);
@@ -89,20 +97,22 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
 
   const play = buttons.get("#playSongs");
   const pause = buttons.get("#togglePauseBtn");
-  async function click(element, event = {}) {
+  const playlist = buttons.get("#playlist");
+  async function dispatch(element, type, event = {}) {
     if (element.disabled) return;
-    listeners.get(element)?.click?.(event);
+    listeners.get(element)?.[type]?.(event);
     await new Promise(setImmediate);
   }
   return {
     plays,
-    clickPlayback: () => click(play.style.display === "none" ? pause : play),
-    clickFirstSong: () => {
-      const playlist = buttons.get("#playlist");
-      return click(playlist, {
-        target: { closest: (selector) => selector.startsWith("li") ? playlist.children[0] : null },
-      });
-    },
+    clickPlayback: () => dispatch(play.style.display === "none" ? pause : play, "click"),
+    clickFirstSong: () => dispatch(playlist, "click", {
+      target: { closest: (selector) => selector.startsWith("li") ? playlist.children[0] : null },
+    }),
+    endSong: () => dispatch(currentAudio, "ended"),
+    rowsWithClass: (name) => playlist.children
+      .filter((row) => row.classList.has(name))
+      .map((row) => row.textContent),
   };
 }
 
@@ -123,4 +133,32 @@ test("clicking the first song starts playback before any audio is loaded", async
   const player = await openPlayer();
   await player.clickFirstSong();
   assert.deepEqual(player.plays, ["file:///C:/Music/First.mp3"]);
+});
+
+test("ordered playback fades past songs and clears the marks on wrap", async () => {
+  const player = await openPlayer();
+  await player.clickPlayback();
+  assert.deepEqual(player.rowsWithClass("songPlayed"), []);
+
+  await player.endSong();
+  assert.deepEqual(player.rowsWithClass("songPlayed"), ["First"]);
+  assert.deepEqual(player.rowsWithClass("songPlaying"), ["Second"]);
+
+  await player.endSong();
+  assert.deepEqual(player.rowsWithClass("songPlayed"), []);
+  assert.deepEqual(player.rowsWithClass("songPlaying"), ["First"]);
+});
+
+test("shuffle clears played marks only after every available song plays", async () => {
+  const player = await openPlayer({ shuffle: true });
+  await player.clickPlayback();
+  assert.deepEqual(player.rowsWithClass("songPlaying"), ["Second"]);
+
+  await player.endSong();
+  assert.deepEqual(player.rowsWithClass("songPlayed"), ["Second"]);
+  assert.deepEqual(player.rowsWithClass("songPlaying"), ["First"]);
+
+  await player.endSong();
+  assert.deepEqual(player.rowsWithClass("songPlayed"), []);
+  assert.deepEqual(player.rowsWithClass("songPlaying"), ["Second"]);
 });

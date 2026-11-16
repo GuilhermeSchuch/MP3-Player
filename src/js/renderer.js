@@ -29,7 +29,7 @@ const APP_NAME                    = "EchoDeck";
 
 // Global configuration
 let currentAudioIndex = 0;
-let randomicSongsPlayed = [];
+const playedSongIds = new Set();
 let isPaused = false;
 let isShuffle = false;
 let currentLanguage = "pt";
@@ -416,6 +416,18 @@ function renderPlaylistRows(songRecords) {
     row.textContent = song.name.replace(".mp3", "");
     playlist.appendChild(row);
   });
+  syncSongRowStates();
+}
+
+function syncSongRowStates() {
+  const currentSongId = getCurrentAudio() ? audioObj.audioFiles[currentAudioIndex]?.id : null;
+  for (const row of playlist.children) {
+    if (row.dataset.playable !== "true") continue;
+    const { songId } = row.dataset;
+    const isCurrent = songId === currentSongId;
+    row.classList.toggle("songPlaying", isCurrent);
+    row.classList.toggle("songPlayed", !isCurrent && playedSongIds.has(songId));
+  }
 }
 
 function setPlaybackControlsEnabled(enabled) {
@@ -444,7 +456,7 @@ async function loadActivePlaylist() {
   audioObj.audioFiles = [];
   audioObj.indexBySongId = {};
   currentAudioIndex = 0;
-  randomicSongsPlayed = [];
+  playedSongIds.clear();
   progressBar.value = 0;
 
   const activePlaylist = getActivePlaylistRecord();
@@ -881,6 +893,7 @@ function playIncomingSong() {
   if (audioObj.audioFiles.length === 0) return;
   pauseCurrentSong();
   
+  const startsNewRun = !isShuffle && currentAudioIndex === audioObj.audioFiles.length - 1;
   if(currentAudioIndex === audioObj.audioFiles.length - 1) {
     currentAudioIndex = 0;
   }
@@ -893,14 +906,16 @@ function playIncomingSong() {
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
   scrollToCurrentSong();
-  playCurrentSong({ chooseShuffle: isShuffle });
+  playCurrentSong({ chooseShuffle: isShuffle, startsNewRun });
 }
 
-async function playCurrentSong({ chooseShuffle = isShuffle } = {}) {
+async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false } = {}) {
   await refreshSongGains();
+  if (audioObj.audioFiles.length === 0) return;
 
+  if (startsNewRun) playedSongIds.clear();
   if(chooseShuffle && isShuffle) {
-    currentAudioIndex = getRandomNumber(audioObj.audioFiles.length - 1);
+    currentAudioIndex = chooseShuffledSongIndex();
     scrollToCurrentSong();
   }
   
@@ -919,11 +934,8 @@ async function playCurrentSong({ chooseShuffle = isShuffle } = {}) {
     currentAudio.play();
     updateDiscordPresence(currentSong, false, currentAudio);
 
-    document.querySelectorAll("li").forEach((song) => {
-      song.classList.remove("songPlaying");
-    })
-
-    getSongRow(currentSong.id)?.classList.add("songPlaying");
+    playedSongIds.add(currentSong.id);
+    syncSongRowStates();
     
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
@@ -1018,10 +1030,6 @@ function playSongAtIndex(index) {
   
   pauseCurrentSong();
   currentAudioIndex = index;
-  if (isShuffle && !randomicSongsPlayed.includes(index)) {
-    randomicSongsPlayed.push(index);
-  }
-
   scrollToCurrentSong();
   playCurrentSong({ chooseShuffle: false });
 }
@@ -1137,23 +1145,19 @@ async function parseConfigs() {
   return [shuffleConfig]
 }
 
-function getRandomNumber(max) {
-  let availableIndexes = [];
-
-  for(let index = 0; index <= max; index++) {
-    if(!randomicSongsPlayed.includes(index)) {
+function chooseShuffledSongIndex() {
+  const availableIndexes = [];
+  audioObj.audioFiles.forEach((song, index) => {
+    if (!playedSongIds.has(song.id)) {
       availableIndexes.push(index);
     }
-  }
+  });
 
-  if(availableIndexes.length === 0) {
-    randomicSongsPlayed = [];
-    availableIndexes = Array.from({ length: max + 1 }, (_, index) => index);
+  if (availableIndexes.length > 0) {
+    return availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
   }
-
-  const newIndex = availableIndexes[Math.floor(Math.random() * availableIndexes.length)];
-  randomicSongsPlayed.push(newIndex);  
-  return newIndex;
+  playedSongIds.clear();
+  return Math.floor(Math.random() * audioObj.audioFiles.length);
 }
 
 function forwardOrBackSong(newTime) {

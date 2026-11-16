@@ -46,6 +46,10 @@
   color: #76ABAE;
 }
 
+.songPlayed {
+  color: #a7adb5;
+}
+
 .clearBtn {
   background-color: transparent;
   border: none;
@@ -194,6 +198,14 @@ body {
 
 .controlBtn:hover {
   opacity: .7;
+}
+
+.controlBtn:focus {
+  outline: none;
+}
+
+.controlBtn:focus-visible {
+  box-shadow: 0 2px 0 #76ABAE;
 }
 
 #progressBar {
