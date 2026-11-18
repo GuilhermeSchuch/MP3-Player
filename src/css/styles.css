@@ -200,11 +200,13 @@ body {
   opacity: .7;
 }
 
-.controlBtn:focus {
+.controlBtn:focus,
+.controls input[type="range"]:focus {
   outline: none;
 }
 
-.controlBtn:focus-visible {
+.controlBtn:focus-visible,
+.controls input[type="range"]:focus-visible {
   box-shadow: 0 2px 0 #76ABAE;
 }
 
