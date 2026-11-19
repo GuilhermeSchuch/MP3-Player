@@ -20,7 +20,7 @@ function createUserData(t) {
   return directory;
 }
 
-async function launch(userData, displays) {
+async function launch(userData, displays, handlers = new Map()) {
   let window;
   const electron = {
     app: {
@@ -41,7 +41,7 @@ async function launch(userData, displays) {
       loadFile() {}
     },
     globalShortcut: { register() {} },
-    ipcMain: { handle() {} },
+    ipcMain: { handle(name, handler) { handlers.set(name, handler); } },
     screen: { getAllDisplays: () => displays },
   };
 
@@ -54,6 +54,20 @@ async function launch(userData, displays) {
   await Promise.resolve();
   return window;
 }
+
+test("volume survives other settings writes and a main-process restart", async t => {
+  const directory = createUserData(t);
+  const handlers = new Map();
+  await launch(directory, [primary], handlers);
+  const settings = [{ name: "songGains", value: { "Song.mp3": 2 } }];
+  handlers.get("save-config")(null, settings);
+  handlers.get("save-volume")(null, 0.21);
+  assert.deepEqual(JSON.parse(JSON.stringify(handlers.get("load-config")())), [...settings, { name: "volume", value: 0.21 }]);
+  handlers.get("save-volume")(null, 0);
+  handlers.get("save-config")(null, settings);
+  await launch(directory, [primary], handlers);
+  assert.deepEqual(JSON.parse(JSON.stringify(handlers.get("load-config")())), [...settings, { name: "volume", value: 0 }]);
+});
 
 test("reopens at the last position on a monitor left of the primary display", async (t) => {
   const userData = createUserData(t);

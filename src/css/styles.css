@@ -134,7 +134,7 @@ body {
   cursor: pointer;
 }
 
-.playlistActionBtn:hover:not(:disabled) {
+.playlistActionBtn:hover:not(:disabled, [aria-pressed="true"]) {
   color: #76ABAE;
 }
 
@@ -166,6 +166,24 @@ body {
 #progressBar {
   flex-shrink: 0;
 }
+
+.viewSwitch { display: flex; gap: 4px; }
+.viewSwitch [aria-pressed="true"] { background: #76ABAE; color: #222831; }
+#lyricsView {
+  flex: 1;
+  min-height: 0;
+  margin: 5px 0;
+  padding: 12px;
+  color: #eee;
+  background: #292f38;
+  border-radius: 4px;
+}
+#lyricsView:not([hidden]) { display: flex; flex-direction: column; }
+#lyricsTitle { font-size: 18px; overflow-wrap: anywhere; text-transform: none; }
+#lyricsStatus { font-size: 14px; color: #bdc4ca; text-transform: none; }
+#lyricsLines { overflow-y: auto; margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; text-transform: none; }
+#lyricsLines p { padding: 5px 0; color: #bdc4ca; text-transform: none; }
+#lyricsLines .activeLyric { color: #8dd1d4; }
 
 .controls {
   /* border: 1px solid red; */

@@ -30,6 +30,15 @@ const APP_NAME                    = "EchoDeck";
 // Global configuration
 let currentAudioIndex = 0;
 const playedSongIds = new Set();
+const lyricsView = document.querySelector("#lyricsView");
+const lyricsLines = document.querySelector("#lyricsLines");
+const lyricsStatus = document.querySelector("#lyricsStatus");
+const playlistViewBtn = document.querySelector("#playlistViewBtn");
+const lyricsViewBtn = document.querySelector("#lyricsViewBtn");
+let showingLyrics = false;
+let lyricsRequest = 0;
+let timedLines = [];
+let highlightedLine = -1;
 let isPaused = false;
 let isShuffle = false;
 let currentLanguage = "pt";
@@ -39,6 +48,14 @@ const importedFilesByPath = new Map();
 
 const translations = {
   en: {
+    playlistView: "Playlist",
+    lyricsView: "Lyrics",
+    lyricsIdle: "Play a song to see its lyrics.",
+    lyricsLoading: "Looking up lyrics…",
+    lyricsPlain: "Lyrics available without timing",
+    lyricsMissing: "No matching lyrics found.",
+    lyricsInstrumental: "Instrumental track",
+    lyricsError: "Lyrics service unavailable. Select Lyrics to retry.",
     selectSongs: "Select Songs",
     noPlaylists: "No playlists",
     newPlaylist: "New",
@@ -64,6 +81,14 @@ const translations = {
     confirm: "OK",
   },
   pt: {
+    playlistView: "Playlist",
+    lyricsView: "Letra",
+    lyricsIdle: "Toque uma música para ver a letra.",
+    lyricsLoading: "Buscando letra…",
+    lyricsPlain: "Letra disponível sem sincronização",
+    lyricsMissing: "Nenhuma letra encontrada para esta música.",
+    lyricsInstrumental: "Música instrumental",
+    lyricsError: "Serviço de letras indisponível. Selecione Letra para tentar novamente.",
     selectSongs: "Selecionar Músicas",
     noPlaylists: "Nenhuma playlist",
     newPlaylist: "Nova",
@@ -98,6 +123,74 @@ const defaultSettings = [
 function translate(key) {
   return translations[currentLanguage][key] || translations.pt[key] || key;
 }
+
+function showLyricsStatus(key) {
+  lyricsStatus.dataset.i18n = key;
+  lyricsStatus.textContent = key ? translate(key) : "";
+}
+
+function syncLyrics() {
+  if (!showingLyrics || !timedLines.length) return;
+  const time = getCurrentAudio()?.currentTime;
+  const next = timedLines.findLastIndex(line => line.time <= time);
+  if (next === highlightedLine) return;
+  lyricsLines.children[highlightedLine]?.classList.remove("activeLyric");
+  highlightedLine = next;
+  const row = lyricsLines.children[next];
+  if (row) {
+    row.classList.add("activeLyric");
+    row.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+  } else {
+    lyricsLines.scrollTop = 0;
+  }
+}
+
+async function refreshLyrics() {
+  const request = ++lyricsRequest;
+  if (!showingLyrics) return;
+  timedLines = [];
+  highlightedLine = -1;
+  lyricsLines.replaceChildren();
+  lyricsLines.scrollTop = 0;
+  const audio = getCurrentAudio();
+  const song = audio && audioObj.audioFiles[currentAudioIndex];
+  document.querySelector("#lyricsTitle").textContent = song ? getSongDisplayName(song) : "";
+  showLyricsStatus(song ? "lyricsLoading" : "lyricsIdle");
+  if (!song || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+  try {
+    const result = await window.electronAPI.lookupLyrics(song.id, audio.duration);
+    if (request !== lyricsRequest || audio !== getCurrentAudio()) return;
+    if (result.kind === "synced") {
+      showLyricsStatus("");
+      timedLines = result.lines;
+      for (const line of timedLines) {
+        const row = document.createElement("p");
+        row.textContent = line.text;
+        lyricsLines.appendChild(row);
+      }
+      syncLyrics();
+    } else if (result.kind === "plain") {
+      showLyricsStatus("lyricsPlain");
+      lyricsLines.textContent = result.text;
+    } else {
+      showLyricsStatus(result.kind === "instrumental" ? "lyricsInstrumental" : "lyricsMissing");
+    }
+  } catch {
+    if (request === lyricsRequest) showLyricsStatus("lyricsError");
+  }
+}
+
+function setLyricsView(visible) {
+  showingLyrics = visible;
+  lyricsView.hidden = !visible;
+  playlist.hidden = visible;
+  playlistViewBtn.setAttribute("aria-pressed", String(!visible));
+  lyricsViewBtn.setAttribute("aria-pressed", String(visible));
+  refreshLyrics();
+}
+
+playlistViewBtn.addEventListener("click", () => setLyricsView(false));
+lyricsViewBtn.addEventListener("click", () => setLyricsView(true));
 
 function showDialog({ title = APP_NAME, message = "", mode = "message", initialValue = "" }) {
   return new Promise((resolve) => {
@@ -456,6 +549,7 @@ async function loadActivePlaylist() {
   audioObj.audioFiles = [];
   audioObj.indexBySongId = {};
   currentAudioIndex = 0;
+  refreshLyrics();
   playedSongIds.clear();
   progressBar.value = 0;
 
@@ -809,13 +903,7 @@ playlist.addEventListener("click", (event) => {
   if (Number.isInteger(queueIndex)) playSongAtIndex(queueIndex);
 });
 
-volume.addEventListener("input", (e) => {
-  const volume = e.target.value;
-  const currentAudio = getCurrentAudio();
-
-  if(currentAudio) currentAudio.volume = volume;
-  audioObj.volume = volume;
-})
+volume.addEventListener("input", () => updateVolume(Number(volume.value)))
 
 songGain.addEventListener("input", (e) => {
   const gain = Number(e.target.value);
@@ -932,6 +1020,11 @@ async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false
     isPaused = false;
 
     currentAudio.play();
+    refreshLyrics();
+    currentAudio.addEventListener("loadedmetadata", () => {
+      if (currentAudio === getCurrentAudio()) refreshLyrics();
+    });
+    currentAudio.addEventListener("seeked", syncLyrics);
     updateDiscordPresence(currentSong, false, currentAudio);
 
     playedSongIds.add(currentSong.id);
@@ -950,6 +1043,7 @@ async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false
 }
 
 function updateProgressBar() {
+  syncLyrics();
   const currentAudio = getCurrentAudio();
   const progress = (currentAudio?.currentTime / currentAudio?.duration) * 100;
 
@@ -992,10 +1086,12 @@ function togglePause() {
 }
 
 async function toggleSettings() {
+  if (showingLyrics) setLyricsView(false);
   const settings = await configObj.createElement();
 
   if(configObj.isSettingsShown) {
     configObj.isSettingsShown = false;
+    lyricsViewBtn.disabled = false;
     
     settings.remove();
     configObj.settingsElement = null;
@@ -1010,6 +1106,7 @@ async function toggleSettings() {
   }
   else {
     configObj.isSettingsShown = true;
+    lyricsViewBtn.disabled = true;
 
     Array.from(playlist.children).forEach((song) => {
       song.style.display = "none";
@@ -1048,40 +1145,23 @@ function scrollToSong({ type = null, atIndex = false }) {
   scrollToCurrentSong();
 };
 
+function applyVolume(value) {
+  audioObj.volume = value;
+  volume.value = value;
+  const audio = getCurrentAudio();
+  if (audio) audio.volume = value;
+}
+
+function updateVolume(value) {
+  if (value === audioObj.volume) return;
+  applyVolume(value);
+  window.electronAPI.saveVolume(value).catch(error => console.error("Unable to save volume", error));
+}
+
 function handleVolume(code) {
-  let newVolume = audioObj.volume;
-
-  switch (code) {
-    case 77:
-      newVolume = 0;
-
-      audioObj.volume = newVolume;
-      volume.value = newVolume;
-      break;
-
-    case 85:
-      if(volume.value != 1) {
-        newVolume = Math.round((parseFloat(audioObj.volume) + 0.1) * 10) / 10;
-
-        audioObj.volume = newVolume;
-        volume.value = newVolume;
-      }
-      break;
-
-    case 68:
-      if(volume.value != 0) {
-        newVolume = Math.round((parseFloat(audioObj.volume) - 0.1) * 10) / 10;
-
-        audioObj.volume = newVolume;
-        volume.value = newVolume;
-      }
-      break;
-  
-    default:
-      break;
-  }
-
-  getCurrentAudio().volume = newVolume;
+  const step = code === 85 ? 0.1 : -0.1;
+  const value = code === 77 ? 0 : Math.round((audioObj.volume + step) * 10) / 10;
+  updateVolume(Math.min(1, Math.max(0, value)));
 }
 
 function mountSongElement(song) {
@@ -1172,6 +1252,8 @@ function forwardOrBackSong(newTime) {
 
 async function initializeApp() {
   const settings = await configObj.getUserSettings();
+  const savedVolume = Array.isArray(settings) && settings.find(entry => entry.name === "volume")?.value;
+  applyVolume(Number.isFinite(savedVolume) && savedVolume >= 0 && savedVolume <= 1 ? savedVolume : 0.5);
   applyLanguage(getLanguage(settings));
 
   await parseConfigs();

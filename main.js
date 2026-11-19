@@ -3,6 +3,7 @@ const { app, BrowserWindow, globalShortcut, ipcMain, screen } = require('electro
 const fs = require("node:fs");
 const path = require("node:path");
 const playlistStorage = require("./src/js/playlist-storage");
+const { lookupLyrics } = require("./src/js/lyrics");
 const { buildActivity, createDiscordPresence } = require("./src/js/discord-presence");
 
 const appName = "EchoDeck";
@@ -60,17 +61,28 @@ if(!fs.existsSync(configPath)) {
 }
 
 // Get user settings from config.json file
-ipcMain.handle("load-config", () => {  
+function loadConfig() {
   if(fs.existsSync(configPath)) {    
     const data = fs.readFileSync(configPath, 'utf-8');
     if(data) return JSON.parse(data);
   }
   return [];
-});
+}
+ipcMain.handle("load-config", loadConfig);
 
 // Save user settings into config.json file
 ipcMain.handle("save-config", (event, newConfig) => {
-  fs.writeFileSync(configPath, JSON.stringify(newConfig));
+  const volume = loadConfig().find(setting => setting.name === "volume");
+  const settings = newConfig.filter(setting => setting.name !== "volume");
+  if (volume) settings.push(volume);
+  fs.writeFileSync(configPath, JSON.stringify(settings));
+});
+
+ipcMain.handle("save-volume", (_event, value) => {
+  if (!Number.isFinite(value) || value < 0 || value > 1) return;
+  const settings = loadConfig().filter(setting => setting.name !== "volume");
+  settings.push({ name: "volume", value });
+  fs.writeFileSync(configPath, JSON.stringify(settings));
 });
 
 ipcMain.handle("load-playlists", () => {
@@ -83,6 +95,16 @@ ipcMain.handle("save-playlists", (event, document) => {
 
 ipcMain.handle("inspect-playlist-songs", (event, songs) => {
   return playlistStorage.inspectPlaylistSongs(songs);
+});
+
+ipcMain.handle("lookup-lyrics", (_event, songId, duration) => {
+  const document = playlistStorage.loadPlaylists(playlistsPath);
+  const playlist = document.playlists.find(item => item.id === document.activePlaylistId);
+  const song = playlist?.songs.find(item => item.id === songId);
+  if (!song || path.extname(song.path).toLowerCase() !== ".mp3" || !Number.isFinite(duration) || duration <= 0) {
+    return { kind: "missing" };
+  }
+  return lookupLyrics(song.path, duration, path.join(configuredUserDataPath, "lyrics-cache"));
 });
 
 ipcMain.handle("update-discord-presence", async (event, activity) => {

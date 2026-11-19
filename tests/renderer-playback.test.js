@@ -9,7 +9,7 @@ const rendererPath = path.join(__dirname, "../src/js/renderer.js");
 const source = fs.readFileSync(rendererPath, "utf8")
   .replace(/\ninitializeApp\(\);\s*$/, "\nappReady = initializeApp();");
 
-async function openPlayer({ shuffle = false, missing = false } = {}) {
+async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volumeStore = {} } = {}) {
   const plays = [];
   const buttons = new Map();
   const listeners = new Map();
@@ -37,6 +37,7 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
       setAttribute(name, value) { this[name] = String(value); },
       scrollIntoView() {},
       ...(tag === "audio" && {
+        duration: 180,
         play() { plays.push(this.children[0].src); },
         pause() {},
       }),
@@ -67,8 +68,10 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
         return element;
       },
     },
-    window: { electronAPI: {
-      loadConfig: async () => [{ name: "shuffle", value: shuffle }],
+    window: { matchMedia: () => ({ matches: false }), electronAPI: {
+      lookupLyrics,
+      loadConfig: async () => [{ name: "shuffle", value: shuffle }, { name: "volume", value: volumeStore.value }],
+      saveVolume: async value => { volumeStore.value = value; },
       loadPlaylists: async () => ({
         version: 1,
         activePlaylistId: "saved",
@@ -105,16 +108,81 @@ async function openPlayer({ shuffle = false, missing = false } = {}) {
   }
   return {
     plays,
+    slider: buttons.get("#volume"),
+    audioVolume: () => currentAudio.volume,
+    moveVolumeSlider: async value => {
+      buttons.get("#volume").value = String(value);
+      await dispatch(buttons.get("#volume"), "input");
+    },
+    shortcut: keyCode => dispatch(context.document, "keydown", { keyCode }),
     clickPlayback: () => dispatch(play.style.display === "none" ? pause : play, "click"),
     clickFirstSong: () => dispatch(playlist, "click", {
       target: { closest: (selector) => selector.startsWith("li") ? playlist.children[0] : null },
     }),
     endSong: () => dispatch(currentAudio, "ended"),
+    openLyrics: () => dispatch(buttons.get("#lyricsViewBtn"), "click"),
+    lyricLines: buttons.get("#lyricsLines"),
+    seek: async time => {
+      currentAudio.currentTime = time;
+      await dispatch(currentAudio, "seeked");
+    },
     rowsWithClass: (name) => playlist.children
       .filter((row) => row.classList.has(name))
       .map((row) => row.textContent),
   };
 }
+
+test("volume is restored on reopening, including mute and adjustments before playback", async () => {
+  const volumeStore = {};
+  const first = await openPlayer({ volumeStore });
+  assert.equal(first.slider.value, 0.5);
+  await first.moveVolumeSlider(0.37);
+  const second = await openPlayer({ volumeStore });
+  assert.equal(second.slider.value, 0.37);
+  await second.clickPlayback();
+  assert.equal(second.audioVolume(), 0.37);
+  await second.shortcut(85);
+  assert.equal(second.audioVolume(), 0.5);
+  assert.equal(volumeStore.value, 0.5);
+  await second.shortcut(77);
+  const third = await openPlayer({ volumeStore });
+  await third.clickPlayback();
+  assert.equal(third.slider.value, 0);
+  assert.equal(third.audioVolume(), 0);
+});
+
+test("opening Lyrics mid-song highlights the current line and follows backward seeks", async () => {
+  let requests = 0;
+  const player = await openPlayer({ lookupLyrics: async () => {
+    requests++;
+    return { kind: "synced", lines: [{ time: 2, text: "First" }, { time: 9, text: "Second" }] };
+  } });
+  await player.clickPlayback();
+  await player.seek(12);
+  assert.equal(requests, 0);
+  await player.openLyrics();
+  assert.equal(requests, 1);
+  const [first, second] = player.lyricLines.children;
+  assert.ok(second.classList.has("activeLyric"));
+  await player.seek(3);
+  assert.ok(first.classList.has("activeLyric"));
+  assert.ok(!second.classList.has("activeLyric"));
+  await player.seek(0);
+  assert.ok(!first.classList.has("activeLyric"));
+});
+
+test("a late lookup cannot overwrite the next song's plain lyrics", async () => {
+  let finish;
+  const player = await openPlayer({ lookupLyrics: id => id === "0"
+    ? new Promise(resolve => { finish = resolve; })
+    : Promise.resolve({ kind: "plain", text: "Second song" }) });
+  await player.clickPlayback();
+  await player.openLyrics();
+  await player.endSong();
+  finish({ kind: "plain", text: "First song" });
+  await new Promise(setImmediate);
+  assert.equal(player.lyricLines.textContent, "Second song");
+});
 
 test("Play starts the first available song in a saved playlist", async () => {
   const player = await openPlayer({ missing: true });

@@ -36,9 +36,10 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 ## Features
 
 - Play mp3 files.
+- Open **Lyrics** during playback to follow the highlighted line or read plain lyrics when timing is unavailable. EchoDeck looks up the title and artist on LRCLIB, using MP3 tags or the filename (ideally `Artist - Title.mp3`). It checks the track duration and caches successful matches for offline use.
 - Create and persist multiple playlists.
 - Restore missing songs with a file picker or remove them from a playlist.
-- Adjust and persist per-song gain.
+- Adjust and persist per-song gain. The master volume is also remembered across restarts.
 - Show the current song in Discord when Discord is running.
 - Choose English or Portuguese in settings.
 - Shuffle songs or play them in order, with automatic playlist looping.
@@ -51,7 +52,7 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 
 Run an EchoDeck Windows x64 setup executable and follow the installation wizard. The wizard offers an installation-directory choice and creates desktop and Start menu shortcuts.
 
-The current application version is **3.2.0**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
+The current application version is **3.4.1**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
 
 Installer files are generated locally and ignored by Git. Use the build instructions below to produce one from a checkout.
 
@@ -130,4 +131,4 @@ On Windows, `CommandOrControl` means Ctrl, and `num1` through `num9` refer to th
 
 Start with [AI_CONTEXT.md](AI_CONTEXT.md) for architecture, persistence formats, preload IPC, playback/run tracking, release conventions, tests, and known limitations. It was reviewed against application commit `e0a57a1` on 2026-11-19.
 
-The latest verification passed all 28 automated tests. They cover model/storage behavior and renderer/main-process logic with test doubles. Runtime checks cover actual audio, display placement, browser focus appearance, and Discord integration when work affects those areas.
+The latest verification passed all 35 automated tests. They cover model/storage behavior and renderer/main-process logic with test doubles. Runtime checks cover actual audio, display placement, browser focus appearance, and Discord integration when work affects those areas.

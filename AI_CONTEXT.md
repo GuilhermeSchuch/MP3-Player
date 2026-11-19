@@ -4,7 +4,7 @@ This file is the working context for AI agents modifying this repository. Treat 
 
 ## Handoff status
 
-Reviewed on 2026-11-19 against application commit `e0a57a1` (`Yellow border removed`). The package, lockfile, and visible footer currently report version **3.2.0**. Inspect Git status and recent commits at the start of future work, since this snapshot describes that revision.
+EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.4.1**.
 
 Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and teal keyboard-focus indicators on control buttons and sliders.
 
@@ -25,7 +25,7 @@ EchoDeck is a small Windows-focused Electron desktop application for playing loc
 - Restore the last window position across launches, including secondary monitors.
 - Highlight the current song in teal and fade previously played songs to gray within each playlist run.
 
-The application is intentionally local-only. It has no cloud sync, accounts, shared playlists, metadata editor, audio library manager, or drag-and-drop playlist ordering.
+Playback and playlists are local. Opening Lyrics enables online lookup through LRCLIB. It has no cloud sync, accounts, shared playlists, metadata editor, audio library manager, or drag-and-drop playlist ordering.
 
 ## Technology and runtime
 
@@ -177,6 +177,10 @@ Behavioral rules:
 - Saving normalizes the document before writing it.
 - Deleting a playlist or song never deletes a file from disk.
 
+### Lyrics
+
+The renderer requests lyrics by song ID and duration through preload. The main process resolves the saved track and uses src/js/lyrics.js to read ID3 metadata and query LRCLIB. Successful matches are stored under userData in lyrics-cache/. The renderer highlights lines using the audio clock and discards superseded responses.
+
 ### Window position
 
 `window-position.json` contains `{ "x": number, "y": number }` in `configuredUserDataPath`, which is Electron's current `userData` directory even when config/playlists use the legacy path. The window's `close` handler saves `getNormalBounds()` coordinates, preserving the normal position when minimized.
@@ -324,7 +328,7 @@ Global shortcuts are registered in `main.js` and forwarded to renderer key event
 
 ## Testing strategy
 
-The suite currently contains 28 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
+The suite currently contains 35 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
 
 - `tests/playlist-model.test.js` covers schema normalization, playlist operations, duplicate paths, missing-song filtering, and stable playback queue mappings.
 - `tests/playlist-storage.test.js` covers missing/invalid JSON recovery, save/load round trips, existing/missing path inspection, and file URLs.
@@ -360,7 +364,7 @@ npm run make             # When an installer is requested
 6. Use stable playlist/song IDs and normalized paths; never use row indexes as persistent identity.
 7. Never delete or modify user MP3 files as part of playlist operations.
 8. Preserve `config.json` compatibility and the filename-keyed gain behavior unless a migration is explicitly planned.
-9. Do not re-add lyrics features or a configurable loop setting; both were intentionally removed.
+9. Keep lyrics lookup scoped to the open Lyrics view and keep playlist looping automatic.
 10. Consider maintenance and installer impact before adding dependencies, and reuse the existing platform APIs where suitable.
 11. Keep the compact 500x700 UI usable; test long playlist names, missing rows, and Portuguese labels.
 12. Add tests for model/storage changes and run the full verification commands before claiming completion.
