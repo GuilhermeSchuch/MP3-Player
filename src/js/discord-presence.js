@@ -22,9 +22,10 @@ function buildHandshake(clientId) {
   };
 }
 
-function buildActivity({ title, paused = false, positionSeconds, nowMs = Date.now() } = {}) {
+function buildActivity({ title, paused = false, positionSeconds, durationSeconds, nowMs = Date.now() } = {}) {
   const activity = {
-    type: 0,
+    type: 2, // Listening
+    status_display_type: 2, // Show the track details in the compact status.
     details: cleanText(title, "EchoDeck"),
     assets: {
       large_image: "logo_1_1_",
@@ -38,6 +39,9 @@ function buildActivity({ title, paused = false, positionSeconds, nowMs = Date.no
     activity.timestamps = {
       start: Math.floor(nowMs / 1000 - positionSeconds),
     };
+    if (Number.isFinite(durationSeconds) && durationSeconds > 0 && durationSeconds >= positionSeconds) {
+      activity.timestamps.end = Math.ceil(nowMs / 1000 + durationSeconds - positionSeconds);
+    }
   }
 
   return activity;

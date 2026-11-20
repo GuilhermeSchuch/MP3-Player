@@ -16,19 +16,21 @@ test("builds the Discord handshake payload", () => {
   });
 });
 
-test("anchors the activity timer to the current song position", () => {
+test("publishes the track as a listening activity with a playback timeline", () => {
   const activity = buildActivity({
     title: "Song Title",
     positionSeconds: 42.5,
+    durationSeconds: 180,
     nowMs: 1_700_000_000_000,
     filePath: "C:\\Music\\private-song.mp3",
   });
 
   assert.deepEqual(activity, {
-    type: 0,
+    type: 2,
+    status_display_type: 2,
     details: "Song Title",
     assets: { large_image: "logo_1_1_", large_text: "EchoDeck" },
-    timestamps: { start: 1_699_999_957 },
+    timestamps: { start: 1_699_999_957, end: 1_700_000_138 },
   });
   assert.equal(JSON.stringify(activity).includes("private-song"), false);
 });

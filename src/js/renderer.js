@@ -334,6 +334,9 @@ function buildDiscordActivity(song, currentAudio, paused = false) {
   if (Number.isFinite(currentAudio?.currentTime)) {
     activity.positionSeconds = currentAudio.currentTime;
   }
+  if (Number.isFinite(currentAudio?.duration)) {
+    activity.durationSeconds = currentAudio.duration;
+  }
 
   return activity;
 }
@@ -1025,7 +1028,9 @@ async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false
     currentAudio.play();
     refreshLyrics();
     currentAudio.addEventListener("loadedmetadata", () => {
-      if (currentAudio === getCurrentAudio()) refreshLyrics();
+      if (currentAudio !== getCurrentAudio()) return;
+      refreshLyrics();
+      updateDiscordPresence(currentSong, isPaused, currentAudio);
     });
     currentAudio.addEventListener("seeked", syncLyrics);
     updateDiscordPresence(currentSong, false, currentAudio);

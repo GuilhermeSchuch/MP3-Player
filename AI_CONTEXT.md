@@ -4,7 +4,7 @@ This file is the working context for AI agents modifying this repository. Treat 
 
 ## Handoff status
 
-EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.5.0**.
+EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.6.0**.
 
 Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and teal keyboard-focus indicators on control buttons and sliders.
 
@@ -300,7 +300,7 @@ The Web Audio graph is `HTMLAudioElement -> MediaElementSource -> GainNode -> Au
 
 `setMediaSessionIdentity(song)` sets the song title, EchoDeck artist, and active playlist album in Media Session metadata. The HTML title, Electron app name, and Windows app ID also identify EchoDeck.
 
-The renderer sends the song title, paused state, and HTML audio position to the main-process Discord IPC adapter. The activity uses Playing type (`0`) with `timestamps.start = Math.floor(nowMs / 1000 - positionSeconds)` while playing. Updates occur on track changes, seeks, restarts, and resumes. Paused updates omit timestamps and set `state: "Paused"`. The current implementation uses an elapsed timer. Verify behavior in the real Discord desktop client when modifying it.
+The renderer sends the song title, paused state, and HTML audio position to the main-process Discord IPC adapter. The activity uses Listening type (`2`) with `timestamps.start = Math.floor(nowMs / 1000 - positionSeconds)` while playing. Updates occur on track changes, seeks, restarts, and resumes. Paused updates omit timestamps and set `state: "Paused"`. The compact status uses the track details. When duration is known, an end timestamp enables the listening progress bar. Verify behavior in the real Discord desktop client when modifying it.
 
 The Discord payload contains the song title and EchoDeck branding. Its `large_image` key is `logo_1_1_`, matching the uploaded asset in the Discord Developer Portal. The repository logo is `src/assets/echodeck-logo.png`. The adapter implements Discord IPC directly using `node:net` and searches Windows pipes `discord-ipc-0` through `discord-ipc-9`.
 

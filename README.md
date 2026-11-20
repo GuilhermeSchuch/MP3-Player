@@ -52,7 +52,7 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 
 Run an EchoDeck Windows x64 setup executable and follow the installation wizard. The wizard offers an installation-directory choice and creates desktop and Start menu shortcuts.
 
-The current application version is **3.5.0**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
+The current application version is **3.6.0**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
 
 Installer files are generated locally and ignored by Git. Use the build instructions below to produce one from a checkout.
 
@@ -108,7 +108,7 @@ Use `.env.example` as a template. The ID is an application identifier. The local
 
 `main.js` checks the process environment first and then `.env` beside the application's main script. Verify that this configuration is available in a packaged build when distributing an installer.
 
-EchoDeck publishes a **Playing** activity with its elapsed timestamp anchored to the audio player's current position. It refreshes the anchor on track changes, seeks, restarts, and resumes. Paused activity shows **Paused** with timestamps omitted. The activity image uses the uploaded asset key `logo_1_1_` in the EchoDeck Discord application's **Rich Presence → Art Assets**. If the asset key changes, update `large_image` in `src/js/discord-presence.js` to match.
+EchoDeck publishes a **Listening** activity with the current track in the compact status and a playback progress bar when the track duration is available. It refreshes the anchor on track changes, seeks, restarts, and resumes. Paused activity shows **Paused** with timestamps omitted. The activity image uses the uploaded asset key `logo_1_1_` in the EchoDeck Discord application's **Rich Presence → Art Assets**. If the asset key changes, update `large_image` in `src/js/discord-presence.js` to match.
 
   
 ## Shortcuts
