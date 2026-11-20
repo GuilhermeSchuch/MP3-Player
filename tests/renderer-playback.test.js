@@ -14,6 +14,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
   const buttons = new Map();
   const listeners = new Map();
   let currentAudio = null;
+  let toggleLyricsShortcut;
 
   function createElement(tag) {
     const classList = new Set();
@@ -70,6 +71,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
     },
     window: { matchMedia: () => ({ matches: false }), electronAPI: {
       lookupLyrics,
+      onToggleLyricsView(callback) { toggleLyricsShortcut = callback; },
       loadConfig: async () => [{ name: "shuffle", value: shuffle }, { name: "volume", value: volumeStore.value }],
       saveVolume: async value => { volumeStore.value = value; },
       loadPlaylists: async () => ({
@@ -97,6 +99,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
 
   vm.runInNewContext(source, context, { filename: rendererPath });
   await context.appReady;
+  buttons.get("#dialogOverlay").hidden = true;
 
   const play = buttons.get("#playSongs");
   const pause = buttons.get("#togglePauseBtn");
@@ -108,6 +111,8 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
   }
   return {
     plays,
+    toggleLyricsShortcut,
+    lyricsView: buttons.get("#lyricsView"),
     slider: buttons.get("#volume"),
     audioVolume: () => currentAudio.volume,
     moveVolumeSlider: async value => {
@@ -229,4 +234,16 @@ test("shuffle clears played marks only after every available song plays", async 
   await player.endSong();
   assert.deepEqual(player.rowsWithClass("songPlayed"), []);
   assert.deepEqual(player.rowsWithClass("songPlaying"), ["Second"]);
+});
+
+test("the view shortcut toggles before and during playback without restarting the track", async () => {
+  const player = await openPlayer({ lookupLyrics: async () => ({ kind: "missing" }) });
+  player.toggleLyricsShortcut();
+  assert.equal(player.lyricsView.hidden, false);
+  await player.clickPlayback();
+  player.toggleLyricsShortcut();
+  assert.equal(player.lyricsView.hidden, true);
+  player.toggleLyricsShortcut();
+  assert.equal(player.lyricsView.hidden, false);
+  assert.equal(player.plays.length, 1);
 });

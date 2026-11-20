@@ -191,6 +191,9 @@ function setLyricsView(visible) {
 
 playlistViewBtn.addEventListener("click", () => setLyricsView(false));
 lyricsViewBtn.addEventListener("click", () => setLyricsView(true));
+window.electronAPI.onToggleLyricsView(() => {
+  if (dialogOverlay.hidden && !lyricsViewBtn.disabled) setLyricsView(!showingLyrics);
+});
 
 function showDialog({ title = APP_NAME, message = "", mode = "message", initialValue = "" }) {
   return new Promise((resolve) => {

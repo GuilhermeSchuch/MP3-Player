@@ -4,7 +4,7 @@ This file is the working context for AI agents modifying this repository. Treat 
 
 ## Handoff status
 
-EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.4.1**.
+EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.5.0**.
 
 Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and teal keyboard-focus indicators on control buttons and sliders.
 
@@ -308,11 +308,11 @@ The Discord payload contains the song title and EchoDeck branding. Its `large_im
 
 ### Focus styling
 
-The latest focus change (`e0a57a1`) covers both `.controlBtn` and `.controls input[type="range"]`. Their focus outline is suppressed and `:focus-visible` adds a teal underline with `box-shadow`. Keep buttons and sliders keyboard-focusable when changing these styles.
+The focus rules cover all `button` elements and `.controls input[type="range"]`. Their focus outline is suppressed and `:focus-visible` adds a teal underline with `box-shadow`. Keep buttons and sliders keyboard-focusable when changing these styles.
 
 ## Global shortcuts
 
-Global shortcuts are registered in `main.js` and forwarded to renderer key events:
+Global shortcuts are registered in `main.js` and forwarded to the renderer. The view toggle uses a dedicated IPC event.
 
 | Shortcut | Action |
 | --- | --- |
@@ -325,10 +325,11 @@ Global shortcuts are registered in `main.js` and forwarded to renderer key event
 | Ctrl/Cmd + num3 | Volume up |
 | Ctrl/Cmd + num2 | Mute |
 | Ctrl/Cmd + num1 | Volume down |
+| Ctrl/Cmd + num0 | Switch between Playlist and Lyrics |
 
 ## Testing strategy
 
-The suite currently contains 35 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
+The suite currently contains 36 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
 
 - `tests/playlist-model.test.js` covers schema normalization, playlist operations, duplicate paths, missing-song filtering, and stable playback queue mappings.
 - `tests/playlist-storage.test.js` covers missing/invalid JSON recovery, save/load round trips, existing/missing path inspection, and file URLs.

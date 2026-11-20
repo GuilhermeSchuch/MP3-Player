@@ -212,6 +212,11 @@ const createWindow = async () => {
     win.webContents.sendInputEvent({type: 'keyDown', keyCode: 'd'});
   });
 
+  globalShortcut.register('CommandOrControl+num0', () => {
+    win.webContents.send('toggle-lyrics-view');
+  });
+
+
   win.loadFile(path.join(__dirname, "src/index.html"));
   isDev && win.webContents.openDevTools();
 }

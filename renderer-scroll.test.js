@@ -40,7 +40,7 @@ function loadRendererScrollHelper() {
 
   const context = {
     document,
-    window: { electronAPI: {} },
+    window: { electronAPI: { onToggleLyricsView() {} } },
     navigator: {},
     playlistModel: require("./src/js/playlist-model"),
     console,

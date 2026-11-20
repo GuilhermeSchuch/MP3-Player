@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveConfig: async (config) => ipcRenderer.invoke("save-config", config),
   loadPlaylists: async () => ipcRenderer.invoke("load-playlists"),
   lookupLyrics: (songId, duration) => ipcRenderer.invoke("lookup-lyrics", songId, duration),
+  onToggleLyricsView: (callback) => {
+    ipcRenderer.on("toggle-lyrics-view", () => callback());
+  },
   savePlaylists: async (document) => ipcRenderer.invoke("save-playlists", document),
   inspectPlaylistSongs: async (songs) => ipcRenderer.invoke("inspect-playlist-songs", songs),
   updateDiscordPresence: async (activity) => ipcRenderer.invoke("update-discord-presence", activity),

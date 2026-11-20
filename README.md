@@ -52,7 +52,7 @@ A software made with Electron which have one simple objective, play mp3 files ;)
 
 Run an EchoDeck Windows x64 setup executable and follow the installation wizard. The wizard offers an installation-directory choice and creates desktop and Start menu shortcuts.
 
-The current application version is **3.4.1**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
+The current application version is **3.5.0**. The latest local build was generated from commit `e0a57a1` and is named `EchoDeck-Setup-3.2.0-e0a57a1.exe` under `out/installer/`. This build includes the focus-outline fix for playback buttons and sliders. Earlier `EchoDeck Setup-3.2.0.exe` builds have the same displayed version, so use the filename and source commit to identify this update.
 
 Installer files are generated locally and ignored by Git. Use the build instructions below to produce one from a checkout.
 
@@ -124,11 +124,12 @@ EchoDeck publishes a **Playing** activity with its elapsed timestamp anchored to
 |CommandOrControl+num3           |`Volume up`
 |CommandOrControl+num2           |`Mute`
 |CommandOrControl+num1           |`Volume down`
+|CommandOrControl+num0           |`Switch between Playlist and Lyrics`
 
-On Windows, `CommandOrControl` means Ctrl, and `num1` through `num9` refer to the numeric keypad.
+On Windows, `CommandOrControl` means Ctrl, and `num0` through `num9` refer to the numeric keypad.
 
 ## AI agent handoff
 
 Start with [AI_CONTEXT.md](AI_CONTEXT.md) for architecture, persistence formats, preload IPC, playback/run tracking, release conventions, tests, and known limitations. It was reviewed against application commit `e0a57a1` on 2026-11-19.
 
-The latest verification passed all 35 automated tests. They cover model/storage behavior and renderer/main-process logic with test doubles. Runtime checks cover actual audio, display placement, browser focus appearance, and Discord integration when work affects those areas.
+The latest verification passed all 36 automated tests. They cover model/storage behavior and renderer/main-process logic with test doubles. Runtime checks cover actual audio, display placement, browser focus appearance, and Discord integration when work affects those areas.
