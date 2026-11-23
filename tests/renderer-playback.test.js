@@ -11,6 +11,7 @@ const source = fs.readFileSync(rendererPath, "utf8")
 
 async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volumeStore = {} } = {}) {
   const plays = [];
+  const scrolledSongs = [];
   const buttons = new Map();
   const listeners = new Map();
   let currentAudio = null;
@@ -22,6 +23,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
     classList.toggle = (name, enabled) => enabled ? classList.add(name) : classList.delete(name);
     return {
       children: [],
+      getBoundingClientRect() { return { top: 0, bottom: 100 }; },
       style: {},
       dataset: {},
       classList,
@@ -36,7 +38,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
       append(...children) { this.children.push(...children); },
       replaceChildren() { this.children = []; },
       setAttribute(name, value) { this[name] = String(value); },
-      scrollIntoView() {},
+      scrollIntoView() { if (this.dataset.songId) scrolledSongs.push(this.dataset.songId); },
       ...(tag === "audio" && {
         duration: 180,
         play() { plays.push(this.children[0].src); },
@@ -111,6 +113,7 @@ async function openPlayer({ shuffle = false, missing = false, lookupLyrics, volu
   }
   return {
     plays,
+    scrolledSongs,
     toggleLyricsShortcut,
     lyricsView: buttons.get("#lyricsView"),
     slider: buttons.get("#volume"),
@@ -246,4 +249,16 @@ test("the view shortcut toggles before and during playback without restarting th
   player.toggleLyricsShortcut();
   assert.equal(player.lyricsView.hidden, false);
   assert.equal(player.plays.length, 1);
+});
+
+test("shuffle scrolls once to the chosen song and catches up after Lyrics closes", async () => {
+  const player = await openPlayer({ shuffle: true, lookupLyrics: async () => ({ kind: "missing" }) });
+  await player.clickPlayback();
+  await player.endSong();
+  assert.deepEqual(player.scrolledSongs, ["1", "0"]);
+  await player.openLyrics();
+  await player.endSong();
+  assert.deepEqual(player.scrolledSongs, ["1", "0"]);
+  player.toggleLyricsShortcut();
+  assert.deepEqual(player.scrolledSongs, ["1", "0", "1"]);
 });

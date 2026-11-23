@@ -7,6 +7,7 @@ const assert = require("node:assert/strict");
 function createElement() {
   return {
     children: [],
+      getBoundingClientRect() { return { top: 0, bottom: 100 }; },
     classList: { add() {}, remove() {}, toggle() {}, contains() { return false; } },
     dataset: {},
     style: {},
@@ -29,7 +30,7 @@ function loadRendererScrollHelper() {
   const document = {
     documentElement: {},
     querySelector(selector) {
-      if (selector.startsWith("[data-id=")) return null;
+      if (selector === '[data-id="0"]') return createElement();
       if (!elements.has(selector)) elements.set(selector, createElement());
       return elements.get(selector);
     },
@@ -64,6 +65,7 @@ test("scrolls the currently playing song to the top of the playlist", () => {
   const scrollRequests = [];
   const activeRow = {
     dataset: { songId: "active-song" },
+    getBoundingClientRect() { return { top: 400, bottom: 420 }; },
     scrollIntoView(options) { scrollRequests.push(options); },
   };
 
@@ -74,4 +76,5 @@ test("scrolls the currently playing song to the top of the playlist", () => {
 
   assert.equal(scrollRequests.length, 1);
   assert.equal(scrollRequests[0].block, "start");
+  assert.equal(scrollRequests[0].behavior, "instant");
 });

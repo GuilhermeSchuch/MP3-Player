@@ -184,6 +184,7 @@ function setLyricsView(visible) {
   showingLyrics = visible;
   lyricsView.hidden = !visible;
   playlist.hidden = visible;
+  if (!visible) scrollToCurrentSong();
   playlistViewBtn.setAttribute("aria-pressed", String(!visible));
   lyricsViewBtn.setAttribute("aria-pressed", String(visible));
   refreshLyrics();
@@ -516,6 +517,7 @@ function renderPlaylistRows(songRecords) {
     playlist.appendChild(row);
   });
   syncSongRowStates();
+  scrollToCurrentSong();
 }
 
 function syncSongRowStates() {
@@ -539,9 +541,14 @@ function getSongRow(songId) {
 }
 
 function scrollToCurrentSong() {
+  if (showingLyrics || configObj.isSettingsShown || document.hidden || !getCurrentAudio()) return;
   const currentSong = audioObj.audioFiles[currentAudioIndex];
   const row = currentSong ? getSongRow(currentSong.id) : null;
-  row?.scrollIntoView({ block: "start", behavior: "smooth" });
+  if (!row) return;
+  const bounds = playlist.getBoundingClientRect();
+  const { top, bottom } = row.getBoundingClientRect();
+  const inView = top >= bounds.top && bottom <= bounds.bottom;
+  row.scrollIntoView({ block: "start", behavior: inView ? "smooth" : "instant" });
 }
 
 async function loadActivePlaylist() {
@@ -818,6 +825,8 @@ async function handleSettingChange(event) {
 }
 
 // Listeners
+document.addEventListener("visibilitychange", scrollToCurrentSong);
+
 document.addEventListener("keydown", (e) => {
   if(audioObj.audioFiles.length > 0) {
     switch (e.keyCode) {
@@ -979,7 +988,6 @@ function playPreviousSong() {
   togglePauseBtn.style.display = "flex";
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
 
-  scrollToCurrentSong();
   playCurrentSong({ chooseShuffle: false });
 }
 
@@ -999,7 +1007,6 @@ function playIncomingSong() {
   togglePauseBtn.style.display = "flex";
   togglePauseBtn.innerHTML = "<img src='./assets/pause.ico' alt='PAUSE' width='20'>"
   
-  scrollToCurrentSong();
   playCurrentSong({ chooseShuffle: isShuffle, startsNewRun });
 }
 
@@ -1010,7 +1017,6 @@ async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false
   if (startsNewRun) playedSongIds.clear();
   if(chooseShuffle && isShuffle) {
     currentAudioIndex = chooseShuffledSongIndex();
-    scrollToCurrentSong();
   }
   
   const currentSong = audioObj.audioFiles[currentAudioIndex];
@@ -1037,6 +1043,7 @@ async function playCurrentSong({ chooseShuffle = isShuffle, startsNewRun = false
 
     playedSongIds.add(currentSong.id);
     syncSongRowStates();
+    scrollToCurrentSong();
     
     playSongsBtn.style.display = "none";
     togglePauseBtn.style.display = "flex";
@@ -1108,7 +1115,7 @@ async function toggleSettings() {
       song.style.display = "block";
     })
 
-    scrollToSong({ atIndex: true });
+    scrollToCurrentSong();
 
     await parseConfigs();
   }
@@ -1135,7 +1142,6 @@ function playSongAtIndex(index) {
   
   pauseCurrentSong();
   currentAudioIndex = index;
-  scrollToCurrentSong();
   playCurrentSong({ chooseShuffle: false });
 }
 
@@ -1148,10 +1154,6 @@ function restartCurrentSong() {
     updateDiscordPresence(audioObj.audioFiles[currentAudioIndex], isPaused, currentAudio);
   }
 }
-
-function scrollToSong({ type = null, atIndex = false }) {
-  scrollToCurrentSong();
-};
 
 function applyVolume(value) {
   audioObj.volume = value;

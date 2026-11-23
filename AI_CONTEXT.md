@@ -4,7 +4,7 @@ This file is the working context for AI agents modifying this repository. Treat 
 
 ## Handoff status
 
-EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.6.1**.
+EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.6.2**.
 
 Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and borderless keyboard focus on buttons and a teal keyboard-focus indicator on sliders.
 
@@ -246,7 +246,7 @@ Automatic looping is implemented by `playIncomingSong()`. Ordered playback wraps
 
 `playedSongIds` is session-only state. `playCurrentSong()` records each song ID when playback starts, including manually selected songs and Previous navigation. A skipped or partially heard song therefore counts as played. `syncSongRowStates()` applies `songPlaying` to the current row and `songPlayed` to other recorded IDs. The current row stays teal and played rows use gray `#a7adb5`. Row re-rendering reapplies these classes. Ordered forward wrap, shuffle exhaustion, and active-playlist reload clear the set. Reopening the app starts a fresh run.
 
-`scrollToCurrentSong()` uses stable row IDs and `scrollIntoView({ block: "start", behavior: "smooth" })` to align the active song at the top as far as the list's scroll range permits.
+`scrollToCurrentSong()` uses stable row IDs and top-aligned scrolling (instant for off-screen rows and smooth for visible rows) to align the active song at the top as far as the list's scroll range permits.
 
 ## Renderer responsibilities and flow
 
@@ -329,7 +329,7 @@ Global shortcuts are registered in `main.js` and forwarded to the renderer. The 
 
 ## Testing strategy
 
-The suite currently contains 36 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
+The suite currently contains 37 tests and runs with `npm test`. It covers pure model/storage behavior and executes main/renderer code in Node VM contexts using Electron, DOM, and audio test doubles.
 
 - `tests/playlist-model.test.js` covers schema normalization, playlist operations, duplicate paths, missing-song filtering, and stable playback queue mappings.
 - `tests/playlist-storage.test.js` covers missing/invalid JSON recovery, save/load round trips, existing/missing path inspection, and file URLs.
