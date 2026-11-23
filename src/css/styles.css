@@ -223,7 +223,10 @@ button:focus,
   outline: none;
 }
 
-button:focus-visible,
+button:focus-visible {
+  filter: brightness(1.25);
+}
+
 .controls input[type="range"]:focus-visible {
   box-shadow: 0 2px 0 #76ABAE;
 }
