@@ -1,7 +1,7 @@
 {
   "name": "mp3-player",
   "productName": "EchoDeck",
-  "version": "3.6.2",
+  "version": "3.6.3",
   "description": "EchoDeck local music player",
   "main": "main.js",
   "icon": "favicon.ico",

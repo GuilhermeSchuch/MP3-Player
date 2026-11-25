@@ -4,9 +4,9 @@ This file is the working context for AI agents modifying this repository. Treat 
 
 ## Handoff status
 
-EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.6.2**.
+EchoDeck 3.3.0 adds automatic lyrics lookup. EchoDeck 3.4.0 also restores the last master volume, including mute, from the numeric volume entry in config.json. The package, lockfile, and visible footer report **3.6.3**.
 
-Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and borderless keyboard focus on buttons and a teal keyboard-focus indicator on sliders.
+Recent delivered behavior includes saved window position, working Play on startup, smooth active-song scrolling, played-song fading with per-run reset, and borderless keyboard focus on buttons and the volume slider.
 
 The latest locally generated Windows x64 installer is `out/installer/EchoDeck-Setup-3.2.0-e0a57a1.exe`. It contains the newer focus fix and shares version 3.2.0 with the earlier `EchoDeck Setup-3.2.0.exe`. Identify these builds by source commit and filename. Build outputs are ignored by Git and may be absent in another checkout.
 
@@ -308,7 +308,7 @@ The Discord payload contains the song title and EchoDeck branding. Its `large_im
 
 ### Focus styling
 
-The focus rules cover all `button` elements and `.controls input[type="range"]`. Buttons brighten on keyboard focus. Only sliders use a teal focus underline. Keep buttons and sliders keyboard-focusable when changing these styles.
+The focus rules cover all `button` elements and `.controls input[type="range"]`. Buttons and the volume slider brighten on keyboard focus. The song gain slider uses a teal focus underline. Keep buttons and sliders keyboard-focusable when changing these styles.
 
 ## Global shortcuts
 
